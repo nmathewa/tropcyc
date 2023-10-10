@@ -10,7 +10,7 @@ import cdsapi
 
 vort = ['vorticity',850]
 
-hum = ['relative_humidity']
+hum = ['relative_humidity',[300,325,350,375,400,425,450,475,500]]
 
 c = cdsapi.Client()
 
@@ -18,13 +18,14 @@ for ii in range(2000,2024):
     year = str(ii)
     print(year)
     
-    c.retrieve('reanalysis-era5-pressure-levels',
+    #c.retrieve('reanalysis-era5-pressure-levels',
+    c.retrieve('reanalysis-era5-single-levels',
     {
         'product_type': 'reanalysis',
         'format': 'netcdf',
-        'variable': [vort[0]]
+        'variable':['sea_surface_temperature', 'surface_pressure']
         ,
-        'pressure_level': [vort[1]],
+        #'pressure_level': hum[1],
         'year': year,
         'month': [str(jj).zfill(2) for jj in range(6,12)],
         'day': [
@@ -54,4 +55,4 @@ for ii in range(2000,2024):
             -5,
         ],
     },
-    year+"_v850"+'.nc')
+    year+"_TP_surface"+'.nc')
