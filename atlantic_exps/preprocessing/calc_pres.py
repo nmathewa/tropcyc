@@ -84,6 +84,7 @@ ib_data_tracks2 = pd.concat(timed_frames).reset_index()
 groups = ib_data_tracks2.groupby('SID')
 
 
+
 dfts = []
 for cyc_id , cyc_event in groups:
     print(cyc_id)

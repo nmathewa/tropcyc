@@ -103,6 +103,8 @@ for cyc_id , cyc_event in groups:
 final_dft = pd.concat(dfts)
 
 
+#%%
 
+final_dft.to_csv(main_dir+'rel_vort850.csv')
 
 
