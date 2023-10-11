@@ -18,9 +18,27 @@ main_dir = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps/Datasets/'
 
 
 
-ib_data = pd.read_csv(main_dir+'final_filtered_storms.csv',keep_default_na=False)
+ib_data = pd.read_csv(main_dir+'final_filtered_storms.csv').dropna(how='any',axis=1)
+
+
+
+
+
+
+
 
 ib_data_tracks = ib_data[['SID','datetime','LAT','LON','USA_WIND','DIST2LAND']]
+
+rh_data = pd.read_csv(main_dir+'mean_rh.csv').dropna(how='any',axis=0)
+
+temp_data = pd.read_csv(main_dir+'sst_temp_test.csv')
+
+pres_data = pd.read_csv(main_dir+'test1_pres.csv')
+
+
+
+
+#%%
 
 groups = ib_data_tracks.groupby("SID")
 
@@ -53,6 +71,10 @@ for cyc_id,cyclone in groups:
     timed_frames.append(n_timed_fil)
     
 ib_data_tracks2 = pd.concat(timed_frames).reset_index()
+#%%
+
+ib_data_tracks2.DIST2LAND.plot()
+
 
 #%%
 
