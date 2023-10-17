@@ -31,7 +31,6 @@ df_scaled = pd.DataFrame(scaler.fit_transform(dataset),columns=dataset.columns)
 df_scaled['SID'] = dataset_ori['SID']
 
 
-#%%
 
 x_test = df_scaled[df_scaled['SID'] == '2000266N12337'][['lead', 'pers', 'pres_mean',
        'sst_mean', 'rh_data', 'vo_data', 'cor_param']]
