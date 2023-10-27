@@ -29,6 +29,8 @@ ib_data = pd.read_csv(main_dir+'final_filtered_storms.csv').dropna(how='any',axi
 
 ib_data_tracks = ib_data[['SID','datetime','LAT','LON','USA_WIND','DIST2LAND']]
 
+
+
 rh_data = pd.read_csv(main_dir+'mean_rh.csv').dropna(how='any',axis=0)
 
 temp_data = pd.read_csv(main_dir+'sst_temp_test.csv')

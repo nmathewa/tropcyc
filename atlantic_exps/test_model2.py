@@ -27,12 +27,14 @@ def plot_model_hist(model,test=False):
     """
     Will plot the model history for the loss and accuracy
     """
-    fig,ax = plt.subplots(figsize=(5,5))
+    fig,ax = plt.subplots(figsize=(12,12))
     # calling the keras history object to get the loss and accuracy
-    ax.plot(model.history.history['loss'],label='loss')
-    ax.set_title('Loss (MAE)')
-    ax.set_xlabel('Epochs')
-    ax.set_ylabel('Loss')
+    ax.plot(model.history.history['loss'],label='loss',linewidth=5)
+    ax.set_title('Loss (MAE)',fontsize=30)
+    ax.set_ylabel('Loss',fontsize=30)
+    ax.set_xlabel('Epochs',fontsize=30)
+    ax.tick_params(axis='both', which='major', labelsize=25)
+
     
     
     return fig,ax 
@@ -93,9 +95,10 @@ def set_model():
 model = set_model()
 # Compile the model
 
+opt = tf.keras.optimizers.SGD(0.1, momentum=0.9)
 
 model.compile(loss='mae', optimizer='adam',metrics=['accuracy'])
-callback = tf.keras.callbacks.EarlyStopping(monitor='loss',patience=5)
+callback = tf.keras.callbacks.EarlyStopping(monitor='loss',patience=20)
 
 # Train the model
 model.fit(X_train, y_train, epochs=100,callbacks=[callback])
@@ -120,17 +123,23 @@ predictions['observed'] = scalery.inverse_transform(y_test.reshape(-1,1))
 
 import seaborn as sbs
 
-fig,ax = plt.subplots(figsize=(12,9))
+fig,ax = plt.subplots(figsize=(12,12))
 sbs.regplot(predictions,x='predicted',y='observed',ax=ax)
 
-fig.savefig(out_dir+'final_regression.png')
-#%%
+
 import numpy as np
 mae_mean = abs(predictions['observed'] - predictions['predicted'])
 import scipy as sp
 
 r,p = sp.stats.pearsonr(predictions['predicted'], predictions['observed'])
 
+ax.text(.1, .8, 'r={:.2f}'.format(r),
+            transform=ax.transAxes,fontsize=15)
+
+ax.set_ylabel('Observed wind speeds (kt)',fontsize=30)
+ax.set_xlabel('Predicted wind speeds (kt)',fontsize=30)
+ax.tick_params(axis='both', which='major', labelsize=25)
+fig.savefig(out_dir+'final_regression.png')
 
 #%%
 
@@ -150,6 +159,8 @@ for id_name,event in grp_events:
     
     
 final_predicts = pd.concat(dfts)
+
+final_predicts.to_csv(out_dir+'finals.csv')
 #%%
 
 
