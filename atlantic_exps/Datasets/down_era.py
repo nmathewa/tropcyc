@@ -8,9 +8,12 @@ Created on Fri Oct  6 11:53:31 2023
 
 import cdsapi
 
-vort = ['vorticity',850]
+#vort = ['vorticity',850]
 
-hum = ['relative_humidity',[300,325,350,375,400,425,450,475,500]]
+#hum = ['relative_humidity',[300,325,350,375,400,425,450,475,500]]
+
+uwind = ['u_component_of_wind', [200,250,300,775,800,925]]
+
 
 c = cdsapi.Client()
 
@@ -23,9 +26,9 @@ for ii in range(2000,2024):
     {
         'product_type': 'reanalysis',
         'format': 'netcdf',
-        'variable':['sea_surface_temperature', 'surface_pressure']
+        'variable':['u_component_of_wind', 'v_component_of_wind']
         ,
-        #'pressure_level': hum[1],
+        'pressure_level': uwind[1],
         'year': year,
         'month': [str(jj).zfill(2) for jj in range(6,12)],
         'day': [
@@ -55,4 +58,4 @@ for ii in range(2000,2024):
             -5,
         ],
     },
-    year+"_TP_surface"+'.nc')
+    year+"_UVWIND_surface"+'.nc')
