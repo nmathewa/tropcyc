@@ -5,30 +5,32 @@ Created on Wed Nov  1 14:36:36 2023
 
 @author: nmathewa
 """
+import pandas as pd
+import numpy as np
 
 
 class ib_processor:
     '''
     inputs:
     '''
-    def __init___(self,csv_loc,all_cols=True):
+    def __init__(self,csv_loc,all_cols=True):
         
         read_data = pd.read_csv(csv_loc,keep_default_na=False).iloc[1:,:]
         read_data['datetime'] = pd.to_datetime(read_data['ISO_TIME'],format='%Y-%m-%d %H:%M:%S')
 
-        req_cols = read_data[['datetime','SID','LAT','LON','USA_WIND','DIST2LAND']]
+        req_cols = read_data[['datetime','SID','LAT','LON','USA_WIND','DIST2LAND','BASIN']]
         
         self.final_data = req_cols
         
-    def filter_data(self,data,y1=2000,y2=2023,basin='NA'):
+    def filter_data(self,data=None,y1=2000,y2=2023,basin='NA'):
         
         if data is None:
-            fil_data = sel.final_data
+            fil_data = self.final_data
         else:
             fil_data = data
         
         year_mask = (fil_data['datetime'] > str(y1)) & (fil_data['datetime'] <= str(y2))
-        period_new = n_dft[year_mask][n_dft['BASIN'] == basin]
+        period_new = fil_data[year_mask][fil_data['BASIN'] == basin]
         
         return period_new
     
@@ -43,7 +45,7 @@ class ib_processor:
             fil_data = self.final_data
         else:
             fil_data = data
-        
+        timed_frames = []
         grouped_data = fil_data.groupby('SID')
         
         for cyc_id,cyclone in grouped_data:
