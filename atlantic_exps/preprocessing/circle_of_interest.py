@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 pd.options.mode.chained_assignment = None  # default='warn'
-main_dir = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps/Datasets/'
+data_dir = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps/Datasets/'
 
 ibdata = pd.read_csv(main_dir+'final_proc.csv')
 ibdata['datetime'] = pd.to_datetime(ibdata['datetime'])
@@ -37,12 +37,12 @@ vort_data = xr.open_dataset(main_dir+'vort_850_new.nc').vo.where(mask_land)
 
 #%%
 
-rh_data.r.isel(time=0)
+rh_data.isel(time=0).plot()
 
 #%%
 def angular_average(var_dset,lat,lon,radius=1000,test=False):
-    if isinstance(var_dset,float):
-        return var_dset
+    if isinstance(var_dset,xr.DataArray):
+        raise TypeError
     
     else :
         latmin = int(lat) - 10
@@ -86,12 +86,69 @@ def angular_average(var_dset,lat,lon,radius=1000,test=False):
         else :
             return annul_mean 
 
+
+
+def angular_imgs(var_dset,lat,lon,radius=1000,test=False,box=False):
+    if isinstance(var_dset,float):
+        return var_dset
+    
+    else :
+        latmin = int(lat) - 10
+        latmax = int(lat) + 10
+        lonmin = int(lon) - 10
+        lonmax = int(lon) + 10
+        center = (lat,lon)
+    
+    
+        lats = np.arange(latmin,latmax,1)
+        lons = np.arange(lonmin,lonmax,1)
+    
+        #print(len(lats))
+        #print(len(lons))
+    
+        lat_mesh,lon_mesh = np.meshgrid(lats,lons)
+
+        #radius = 1000
+        radius = radius
+    
+        distances = np.sqrt((center[0] - lat_mesh)**2 + (center[1] - lon_mesh)**2)
+    
+        n_distance = distances * 111
+
+        #print(distances.shape)
+    
+        dist_cond = n_distance <= radius
+    
+        cond_array = xr.DataArray(dist_cond,dims=['latitude','longitude'])
+
+
+        var_dset_sub = var_dset.sel(latitude=lats,longitude=lons,method='nearest')
+        
+        if box :
+            masked_var_data = var_dset_sub
+        else :
+            masked_var_data = var_dset_sub.where(cond_array)
+        
+        
+        return masked_var_data
+    
+
+
 #%%
 
 lat,lon = test_data['LAT'].iloc[0],test_data['LON'].iloc[0]
-testrh = angular_average(rh_data.isel(time=0),lat,lon,vertical=True)
+testrh_circ = angular_average(rh_data.isel(time=0),lat,lon)
+testrh = angular_imgs(rh_data.isel(time=0),lat,lon,box=True)
+test_array = testrh.to_numpy()
+
+import cv2
+
+cv2.imwrite(data_dir+"test.png", test_array)
 
 
+#%%
+
+img = cv2.imread(data_dir+"test.png")
 
 #%%
 

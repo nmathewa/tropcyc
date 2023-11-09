@@ -10,7 +10,7 @@ os.chdir('/home/nmathewa/main/GIT/tropcyc/modules/')
 
 from process_ib import ib_processor
 
-
+out_dir = ''
 filename = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps/Datasets/ibtracs.NA.list.v04r00.csv'
 
 
@@ -22,3 +22,4 @@ all_dft = ib_proc.compute_cols(data=fil_dft)
 
 
 
+all_dft.to_csv("/home/nmathewa/main/GIT/tropcyc/atlantic_exps2/datasets/proc_tracks.csv")
