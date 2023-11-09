@@ -167,20 +167,17 @@ n_ibdata = ib_data_6h
 
 def create_feature_set(variable,lat,lon):
     
-    
-    
-    
     aoi = prepro_features()
     var_ang = aoi.angular_imgs(var_dset=variable,lat=lat,lon=lon,box=True)
     
     if (len(pd.unique(var_ang.longitude)) <= 1) | (len(pd.unique(var_ang.latitude)) <= 1):
-        return None
+        return np.NAN
     else :
         if bool(var_ang.isnull().any()):
             print("NAN values found")
         
             ext_data = extrapolate_fields(variable)
-            n_dset = aoi.angular_imgs(ext_data)
+            n_dset = aoi.angular_imgs(ext_data,lat=lat,lon=lon,box=True)
         else: 
             n_dset = var_ang 
             
@@ -198,9 +195,11 @@ test_event = ib_data_6h[ib_data_6h['SID'] =='2000266N12337']
 arrays = []
 test_out = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps2/datasets/images/test/'
 
-vars_all = [sst_data,pres_data,vort_data,shear_data,sh_data]
-feat_names = ['sst','pres','vort','shear','rh']
+
 ori_data = sst_data
+
+
+
 for jj in range(len(test_event)):
     lat = test_event.LAT.iloc[jj]
     lon = test_event.LON.iloc[jj]
@@ -208,10 +207,10 @@ for jj in range(len(test_event)):
     all_dsets = []
     for dat in vars_all:
         in_data = dat.sel(time=time)
-        dset = create_feature_set(in_data,lat,lon)
+        dset = create_feature_set(in_data,lat,lon).to_dataset()
         all_dsets += [dset]
-    final_dset = xr.concat(all_dsets,dim=feat_names)
-    final_dset = final_dset.rename({'concat_dim':'feature'})
+    final_dset = xr.merge(all_dsets)
+    #final_dset = final_dset.rename({'concat_dim':'feature'})
     id_name = test_event['SID'].iloc[0]
     lead = test_event['lead'].iloc[jj]
     #arrays += [dset.values]
@@ -220,12 +219,43 @@ for jj in range(len(test_event)):
     final_dset.to_netcdf(test_out+id_name+'_'+lead_str+'.nc')
 
 #%%
+import numpy as np
 
-for var in vars_all:
-    in_data = var
-    for jj in range(len(test_event)):
-        lat = test_event.LAT.iloc[jj]
-        lon = test_event.LON.iloc[jj]
-        time = test_event.datetime.iloc[jj]
-        dset = create_feature_set(in_data,lat,lon)
+def create_dsets(event,input_vars,var_names,out_dir):
+    for jj in range(len(event)):
+        lat = event.LAT.iloc[jj]
+        lon = event.LON.iloc[jj]
+        time = event.datetime.iloc[jj]
+        all_dsets = []
         
+        for dat in input_vars:
+            try :
+                in_data = dat.sel(time=time)
+            except KeyError:
+                print('Time not found skipping')
+                dset = None
+                continue
+            try :
+                dset = create_feature_set(in_data,lat,lon).to_dataset()
+            except AttributeError:
+                dset = np.NAN
+                
+            all_dsets += [dset]
+        try :
+            final_dset = xr.merge(all_dsets)
+        except TypeError:
+            print("skipping out of bound")
+            continue
+        id_name = event['SID'].iloc[0]
+        lead = event['lead'].iloc[jj]
+        lead_str = ("{:03d}".format(int(lead)))
+        final_dset.to_netcdf(test_out+id_name+'_'+lead_str+'.nc')
+
+
+vars_all = [sst_data,pres_data,vort_data,shear_data,sh_data]
+feat_names = ['sst','pres','vort','shear','rh']
+groups_all = ib_data_6h.groupby('SID')
+
+for label,event in groups_all:
+    n_event = event.reset_index()
+    create_dsets(n_event,vars_all,feat_names,test_out)
