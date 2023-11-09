@@ -86,7 +86,6 @@ extrapolate_fields(sst_data.sel(time='2000-06-07T18:00:00')).plot()
 
 #%%
 import numpy as np
-test_out = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps2/datasets/images/test/'
 import cv2
 from PIL import Image
 vals_all = []
@@ -180,13 +179,8 @@ def create_feature_set(variable,lat,lon):
         if bool(var_ang.isnull().any()):
             print("NAN values found")
         
-            n_dset = extrapolate_fields(var_ang)
-            if bool(n_dset.isnull().any()):
-                n_dset
-                raise NotImplementedError
-            else:
-                #n_dset.plot()
-                pass
+            ext_data = extrapolate_fields(variable)
+            n_dset = aoi.angular_imgs(ext_data)
         else: 
             n_dset = var_ang 
             
@@ -202,18 +196,28 @@ test_event = ib_data_6h[ib_data_6h['SID'] =='2000266N12337']
 #lat = test_event.LAT.iloc[0]
 #lon = test_event.LON.iloc[0]
 arrays = []
+test_out = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps2/datasets/images/test/'
 
-vars_all = [sst_data,pres_data,vort_data,pres_data,shear_data]
-
+vars_all = [sst_data,pres_data,vort_data,shear_data,sh_data]
+feat_names = ['sst','pres','vort','shear','rh']
+ori_data = sst_data
 for jj in range(len(test_event)):
     lat = test_event.LAT.iloc[jj]
     lon = test_event.LON.iloc[jj]
     time = test_event.datetime.iloc[jj]
-    dset = create_feature_set(in_data,lat,lon)
-        
-                                                                                                                                                            
-    arrays += [dset]
-    
+    all_dsets = []
+    for dat in vars_all:
+        in_data = dat.sel(time=time)
+        dset = create_feature_set(in_data,lat,lon)
+        all_dsets += [dset]
+    final_dset = xr.concat(all_dsets,dim=feat_names)
+    final_dset = final_dset.rename({'concat_dim':'feature'})
+    id_name = test_event['SID'].iloc[0]
+    lead = test_event['lead'].iloc[jj]
+    #arrays += [dset.values]
+    lead_str = ("{:03d}".format(int(lead)))
+    #print(test_out+id_name+'_'+lead_str+'.nc')
+    final_dset.to_netcdf(test_out+id_name+'_'+lead_str+'.nc')
 
 #%%
 
