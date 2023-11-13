@@ -194,7 +194,7 @@ test_event = ib_data_6h[ib_data_6h['SID'] =='2000266N12337']
 #lon = test_event.LON.iloc[0]
 arrays = []
 test_out = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps2/datasets/images/test/'
-
+final_out = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps2/datasets/images/'
 
 ori_data = sst_data
 
@@ -249,7 +249,7 @@ def create_dsets(event,input_vars,var_names,out_dir):
         id_name = event['SID'].iloc[0]
         lead = event['lead'].iloc[jj]
         lead_str = ("{:03d}".format(int(lead)))
-        final_dset.to_netcdf(test_out+id_name+'_'+lead_str+'.nc')
+        final_dset.to_netcdf(out_dir+id_name+'_'+lead_str+'.nc')
 
 
 vars_all = [sst_data,pres_data,vort_data,shear_data,sh_data]
@@ -258,4 +258,4 @@ groups_all = ib_data_6h.groupby('SID')
 
 for label,event in groups_all:
     n_event = event.reset_index()
-    create_dsets(n_event,vars_all,feat_names,test_out)
+    create_dsets(n_event,vars_all,feat_names,final_out)

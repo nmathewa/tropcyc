@@ -17,9 +17,13 @@ import matplotlib.pyplot as plt
 all_ncs = glob.glob(test_ins+"*.nc")
 
 
+
+
+
+#%%
 for ii in all_ncs:
     names = ii.split(os.sep)[-1].split('.')[0] + '.png'
-    dset = xr.open_dataset(ii)
+    #dset = xr.open_dataset(ii)
     #fig,ax = plt.subplots()
     #dset.sst.plot(ax=ax)
     #fig.savefig(test_ins+names)
