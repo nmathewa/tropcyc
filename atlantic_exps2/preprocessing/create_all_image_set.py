@@ -26,11 +26,17 @@ for ii in range(len(stat_dft)):
     all_vars = list(dset.keys())
     all_arrs = []
     for jj in all_vars:
-        all_arrs += [dset[jj].values]
+        dset_data = dset[jj].values
+        all_arrs += [dset_data]
+    
     try:
-        imgs += [np.dstack(all_arrs)]
-        cyc_ids += [stat_dft['cyclone_id'].iloc[ii]]
-        lead_times += [stat_dft['lead_time'].iloc[ii]]
+        n_data = np.dstack(all_arrs)
+        if np.isnan(n_data).any():
+            continue
+        else:
+            imgs += [np.dstack(all_arrs)]
+            cyc_ids += [stat_dft['cyclone_id'].iloc[ii]]
+            lead_times += [stat_dft['lead_time'].iloc[ii]]
     except ValueError:
         print("file empty")
         continue
@@ -45,9 +51,33 @@ import tensorflow as tf
 final_images = np.stack(imgs,axis=0)
 
 
-final_image.save()
+np.save(in_dir+'final_arr.npy',final_images)
+
+#%%
+
+support_file = pd.DataFrame(cyc_ids,columns=['id'])
+
+support_file['lead_time'] = lead_times
 
 
+#%% create targets 
+
+#support_file.to_csv(in_dir+'support_file.csv')
+#%%create targets 
+
+dft_speed = pd.read_csv('/home/nmathewa/main/GIT/tropcyc/atlantic_exps2/datasets/proc_tracks.csv')
 
 
+target_order = []
+for ii in range(len(support_file)):
+    id_val = support_file['id'].iloc[ii]
+    lead = support_file['lead_time'].iloc[ii]
+    target_val = dft_speed[(dft_speed['SID'] == id_val) & (dft_speed['lead'] == lead)]
+    target_order += [target_val['USA_WIND'].values[0]]
 
+
+#%%
+
+support_file['USA_WIND'] = target_order
+
+support_file.to_csv(in_dir+'targets.csv')

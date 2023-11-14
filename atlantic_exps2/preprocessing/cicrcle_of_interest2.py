@@ -23,7 +23,8 @@ shear_data = xr.open_dataset(in_datasets+'vspeed_shear.nc').speed_shear.reindex(
                                                                                 latitude=sh_data.latitude,
                                                                                 longitude=sh_data.longitude)
 
-vort_data = xr.open_dataset(in_datasets+'vort_850_new.nc').vo.sel(expver=5).reindex(time=sh_data.time)
+vort_data = xr.open_dataset(in_datasets+'vort_850_new.nc').vo.sel(expver=5).resample(time='6H').mean()
+#.reindex(time=sh_data.time)
 
 pres_data = xr.open_dataset(in_datasets+'Spres_new.nc').sp.reindex(time=sh_data.time)
 
@@ -162,7 +163,8 @@ for ii in range(len(vals_all)):
     np.save(out_file[ii],vals_all[ii])
     
 #%%
-
+vals_all = []
+vars_all = []
 n_ibdata = ib_data_6h
 
 def create_feature_set(variable,lat,lon):
@@ -171,7 +173,7 @@ def create_feature_set(variable,lat,lon):
     var_ang = aoi.angular_imgs(var_dset=variable,lat=lat,lon=lon,box=True)
     
     if (len(pd.unique(var_ang.longitude)) <= 1) | (len(pd.unique(var_ang.latitude)) <= 1):
-        return np.NAN
+        return np.NAN # returning nans
     else :
         if bool(var_ang.isnull().any()):
             print("NAN values found")
@@ -208,6 +210,9 @@ for jj in range(len(test_event)):
     for dat in vars_all:
         in_data = dat.sel(time=time)
         dset = create_feature_set(in_data,lat,lon).to_dataset()
+        if dset == np.NAN:
+            print("NAN")
+            continue
         all_dsets += [dset]
     final_dset = xr.merge(all_dsets)
     #final_dset = final_dset.rename({'concat_dim':'feature'})
@@ -216,7 +221,7 @@ for jj in range(len(test_event)):
     #arrays += [dset.values]
     lead_str = ("{:03d}".format(int(lead)))
     #print(test_out+id_name+'_'+lead_str+'.nc')
-    final_dset.to_netcdf(test_out+id_name+'_'+lead_str+'.nc')
+    #final_dset.to_netcdf(test_out+id_name+'_'+lead_str+'.nc')
 
 #%%
 import numpy as np
@@ -238,7 +243,8 @@ def create_dsets(event,input_vars,var_names,out_dir):
             try :
                 dset = create_feature_set(in_data,lat,lon).to_dataset()
             except AttributeError:
-                dset = np.NAN
+                #dset = np.NAN
+                continue
                 
             all_dsets += [dset]
         try :
