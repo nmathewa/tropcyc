@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Tue Nov 14 11:09:52 2023
+Created on Thu Nov 16 00:39:20 2023
 
 @author: nmathewa
 """
@@ -74,7 +74,6 @@ norm_x_test = (x_test - min_vals)/(np.array(max_vals) - np.array(min_vals))
 
 norm_y_test = (y_test - y_test.min())/(y_test.max() - y_test.min())
 
-
 #%%
 
 from tensorflow.keras.models import Sequential
@@ -89,6 +88,9 @@ from keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPool2D
 
 model = Sequential()
 #
+
+regularizer = tf.keras.regularizers.l2(0.1)
+
 model.add(Conv2D(filters = 10, kernel_size = (5,5),padding = 'Same', 
                  activation ='relu', input_shape = (10,10,5)))
 model.add(MaxPool2D(pool_size=(2,2)))
@@ -96,23 +98,26 @@ model.add(MaxPool2D(pool_size=(2,2)))
 #
 model.add(Conv2D(filters = 64, kernel_size = (3,3),padding = 'Same', 
                  activation ='relu'))
+model.add(MaxPool2D(pool_size=(2,2)))
 #model.add(Dropout(0.25))
 # fully connected
 
 model.add(Conv2D(filters = 64, kernel_size = (3,3),padding = 'Same', 
                  activation ='relu'))
 
-model.add(Dropout(0.25))
+model.add(Dropout(0.3))
 
 
 
 model.add(Conv2D(filters = 128, kernel_size = (3,3),padding = 'Same', 
-                 activation ='relu'))
-model.add(Dropout(0.25))
+                 activation ='relu',kernel_regularizer=regularizer))
+model.add(MaxPool2D(pool_size=(2,2)))
+
+model.add(Dropout(0.3))
 
 model.add(Flatten())
-model.add(Dense(64, activation = "relu"))
-model.add(Dropout(0.5))
+model.add(Dense(64, activation = "relu",))
+#model.add(Dropout(0.5))
 model.add(Dense(1, activation = "relu"))
 
 
@@ -147,6 +152,3 @@ fig,ax = plt.subplots()
 
 ax.plot(y_test)
 ax.plot(new_targets)
-
-##83.42
-
