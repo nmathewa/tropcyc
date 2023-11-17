@@ -27,6 +27,71 @@ vort_data = xr.open_dataset(in_datasets+'vort_850_new.nc').vo.sel(expver=5).resa
 #.reindex(time=sh_data.time)
 
 pres_data = xr.open_dataset(in_datasets+'Spres_new.nc').sp.reindex(time=sh_data.time)
+#%%
+
+cor_data =  2 * 7.29 * 1e-5 * np.sin(pres_data['latitude'])
+
+n_data = np.repeat(cor_data.values[:,np.newaxis],len(pres_data['longitude']),axis=1)
+
+n_data_time = np.repeat(n_data[np.newaxis],len(pres_data['time']),axis=0)
+
+cor_dset = xr.DataArray(data=n_data_time,name='cor',
+                        dims=['time','latitude','longitude'],
+                        coords=dict(
+                            latitude=(["latitude"], pres_data.latitude.values),
+                            longitude=(["longitude"], pres_data.longitude.values),
+                            time = (["time"], pres_data.time.values)))
+
+
+#%%
+
+pers_list= []
+dist2land = []
+lead_list = []
+for ii in range(len(ib_data_6h.dropna(axis=1,how='all'))):
+    time = ib_data_6h['datetime'].iloc[ii]
+    pers = ib_data_6h['pers'].iloc[ii]
+    dist2 = ib_data_6h['DIST2LAND'].iloc[ii]
+    lead = ib_data_6h['lead'].iloc[ii]
+    
+    pers_array = np.expand_dims(np.tile(pers,pres_data.shape[1:3]),0)
+    lead_array = np.expand_dims(np.tile(lead,pres_data.shape[1:3]),0)
+    dist2_array = np.expand_dims(np.tile(dist2,pres_data.shape[1:3]),0)
+    
+    pers_list += [xr.DataArray(data=pers_array,name='pers',
+                               dims=['time','latitude','longitude'],
+                               coords=dict(latitude=(["latitude"], pres_data.latitude.values),
+                               longitude=(["longitude"], pres_data.longitude.values),
+                               time = (["time"],[time])
+                                   ))]
+    
+    dist2land += [xr.DataArray(data=dist2_array,name='dist2land',
+                               dims=['time','latitude','longitude'],
+                               coords=dict(latitude=(["latitude"], pres_data.latitude.values),
+                               longitude=(["longitude"], pres_data.longitude.values),
+                               time = (["time"],[time])
+                                   ))]
+    
+    lead_list += [xr.DataArray(data=lead_array,name='lead',
+                               dims=['time','latitude','longitude'],
+                               coords=dict(latitude=(["latitude"], pres_data.latitude.values),
+                               longitude=(["longitude"], pres_data.longitude.values),
+                               time = (["time"],[time])
+                                   ))]
+#%%
+
+ib_test = ib_data_6h.set_index('datetime').dropna(axis=0,how='all')
+
+#%%
+pers_data = xr.concat(pers_list,dim='time')
+lead_data = xr.concat(lead_list,dim='time')
+dist_data = xr.concat(dist2land,dim='time')
+
+#%%
+
+
+
+ddd = pers_data.isnull().any()
 
 #%%
 
@@ -39,9 +104,11 @@ ib_data['datetime'] = pd.to_datetime(ib_data['datetime'])
 
 ib_data_6h = ib_data.set_index('datetime').groupby('SID').resample('6H').first().droplevel(0).reset_index()
 
+ib_data_6h = ib_data_6h.set_index('datetime').dropna(axis=0,how='all').reset_index()
+
 counts = list(ib_data_6h.groupby('SID'))[:3]
 
-
+ 
 test_event = ib_data_6h[ib_data_6h['SID'] =='2000160N21267']
 
 #%%
@@ -226,14 +293,24 @@ for jj in range(len(test_event)):
 #%%
 import numpy as np
 
+
+ctr = 0
 def create_dsets(event,input_vars,var_names,out_dir):
+    # select an single event
     for jj in range(len(event)):
         lat = event.LAT.iloc[jj]
         lon = event.LON.iloc[jj]
         time = event.datetime.iloc[jj]
+        pers = event['pers'].iloc[jj]
+        dist2 = event['DIST2LAND'].iloc[jj]
+        lead = event['lead'].iloc[jj]
         all_dsets = []
         
-        for dat in input_vars:
+        for kk in range(len(input_vars)):
+            dat = input_vars[kk]
+            var = var_names[kk]
+            #print(var)
+            #print(dat)
             try :
                 in_data = dat.sel(time=time)
             except KeyError:
@@ -249,17 +326,59 @@ def create_dsets(event,input_vars,var_names,out_dir):
             all_dsets += [dset]
         try :
             final_dset = xr.merge(all_dsets)
+            
         except TypeError:
             print("skipping out of bound")
             continue
         id_name = event['SID'].iloc[0]
         lead = event['lead'].iloc[jj]
         lead_str = ("{:03d}".format(int(lead)))
+        
+        try : 
+            len(final_dset.latitude)
+            
+        except AttributeError:
+            continue
+    
+        
+        #print(final_dset.r.shape)
+        lead_array = np.tile(lead,(40,40))
+        dist_array = np.tile(dist2,(40,40))
+        pers_array = np.tile(pers,(40,40))
+        cor_data =  2 * 7.29 * 1e-5 * np.sin(final_dset['latitude'])
+        n_data = np.repeat(cor_data.values[:,np.newaxis],40,axis=1)
+        
+        
+        print(final_dset.r.shape)
+        #print(time)
+        
+        final_dset['cor'] = xr.DataArray(data=n_data,name='corio',
+                                   dims=['latitude','longitude'],
+                                   coords=dict(latitude=(["latitude"], final_dset.latitude.values),
+                                   longitude=(["longitude"], final_dset.longitude.values)
+                                       ))
+        final_dset['lead'] = xr.DataArray(data=lead_array,name='lead',
+                                   dims=['latitude','longitude'],
+                                   coords=dict(latitude=(["latitude"], final_dset.latitude.values),
+                                   longitude=(["longitude"], final_dset.longitude.values)
+                                       ))
+        
+        final_dset['pers'] = xr.DataArray(data=pers_array,name='pers',
+                                   dims=['latitude','longitude'],
+                                   coords=dict(latitude=(["latitude"], final_dset.latitude.values),
+                                   longitude=(["longitude"], final_dset.longitude.values)
+                                       ))
+        final_dset['dist'] = xr.DataArray(data=dist_array,name='dist',
+                                   dims=['latitude','longitude'],
+                                   coords=dict(latitude=(["latitude"], final_dset.latitude.values),
+                                   longitude=(["longitude"], final_dset.longitude.values)
+                                       ))
         final_dset.to_netcdf(out_dir+id_name+'_'+lead_str+'.nc')
 
+        
 
-vars_all = [sst_data,pres_data,vort_data,shear_data,sh_data]
-feat_names = ['sst','pres','vort','shear','rh']
+vars_all = [sst_data,pres_data,vort_data,shear_data,sh_data]#,cor_dset,dist_data,lead_data, pers_data]
+feat_names = ['sst','pres','vort','shear','rh']#,'corio','dist2land','lead','pers']
 groups_all = ib_data_6h.groupby('SID')
 
 for label,event in groups_all:

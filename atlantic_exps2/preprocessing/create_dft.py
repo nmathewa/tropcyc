@@ -17,6 +17,9 @@ nc_files = glob.glob(in_files+'*.nc')
 
 
 
+
+
+
 nc_dft = pd.DataFrame(nc_files,columns=['files'])
 
 nc_dft['cyclone_id'] = nc_dft['files'].str.split(os.sep).str[-1].str.split('_').str[0]
@@ -24,4 +27,8 @@ nc_dft['cyclone_id'] = nc_dft['files'].str.split(os.sep).str[-1].str.split('_').
 nc_dft['lead_time'] = nc_dft['files'].str.split(os.sep).str[-1].str.split('_').str[1].str[:3]
 
 out_dir = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps2/preprocessing/'
-nc_dft.to_csv(out_dir+'final_events.csv',index=False)
+
+
+
+
+nc_dft.to_csv(out_dir+'final_events_v2.csv',index=False)

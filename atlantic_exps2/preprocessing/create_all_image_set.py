@@ -15,15 +15,19 @@ import os
 
 in_dir = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps2/preprocessing/'
 
-stat_dft = pd.read_csv(in_dir+'final_events.csv',index_col=None)
+stat_dft = pd.read_csv(in_dir+'final_events_v3.csv',index_col=None)
 
+
+#%%
 imgs = []
 cyc_ids = []
 lead_times = []
 for ii in range(len(stat_dft)):
     nc_file = stat_dft['files'].iloc[ii]
     dset = xr.open_dataset(nc_file)
+    
     all_vars = list(dset.keys())
+    
     all_arrs = []
     for jj in all_vars:
         dset_data = dset[jj].values
@@ -31,27 +35,28 @@ for ii in range(len(stat_dft)):
     
     try:
         n_data = np.dstack(all_arrs)
-        if np.isnan(n_data).any():
-            continue
-        else:
-            imgs += [np.dstack(all_arrs)]
-            cyc_ids += [stat_dft['cyclone_id'].iloc[ii]]
-            lead_times += [stat_dft['lead_time'].iloc[ii]]
+        
     except ValueError:
         print("file empty")
         continue
+    if np.isnan(n_data).any():
+        continue
+    else:
+        
+        cyc_ids += [stat_dft['cyclone_id'].iloc[ii]]
+        lead_times += [stat_dft['lead_time'].iloc[ii]]
+        
+        imgs += [np.dstack(all_arrs)]
         
     
 
 #%%
 
-import tensorflow as tf
-
 
 final_images = np.stack(imgs,axis=0)
 
 
-np.save(in_dir+'final_arr.npy',final_images)
+np.save(in_dir+'final_arrv3.npy',final_images)
 
 #%%
 
@@ -62,7 +67,7 @@ support_file['lead_time'] = lead_times
 
 #%% create targets 
 
-#support_file.to_csv(in_dir+'support_file.csv')
+support_file.to_csv(in_dir+'support_file3.csv')
 #%%create targets 
 
 dft_speed = pd.read_csv('/home/nmathewa/main/GIT/tropcyc/atlantic_exps2/datasets/proc_tracks.csv')
@@ -80,4 +85,8 @@ for ii in range(len(support_file)):
 
 support_file['USA_WIND'] = target_order
 
-support_file.to_csv(in_dir+'targets.csv')
+support_file.to_csv(in_dir+'targetsv3.csv')
+
+#%%
+
+

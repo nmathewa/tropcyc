@@ -1,3 +1,4 @@
 *.nc
 *.grib2
 *.csv
+*.npy

@@ -11,7 +11,22 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
+def plot_model_hist(model,test=False):
 
+    """
+    Will plot the model history for the loss and accuracy
+    """
+    fig,ax = plt.subplots(figsize=(12,12))
+    # calling the keras history object to get the loss and accuracy
+    ax.plot(model.history.history['loss'],label='loss',linewidth=5)
+    ax.set_title('Loss (MAE)',fontsize=30)
+    ax.set_ylabel('Loss',fontsize=30)
+    ax.set_xlabel('Epochs',fontsize=30)
+    ax.tick_params(axis='both', which='major', labelsize=25)
+
+    
+    
+    return fig,ax 
 #%%
 in_fol = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps2/preprocessing/'
 
@@ -123,7 +138,12 @@ model.compile(optimizer='adam' , loss = "mae", metrics=["accuracy"])
 model.fit(norm_x_train,norm_y_train,epochs=100,callbacks=[callback])
 
 #%%
+import seaborn as sbs
+sbs.set_theme()
+plot_model_hist(model)
 
+
+#%%
 targets = model.predict(norm_x_test)
 
 #%%
@@ -138,6 +158,23 @@ test['true'] = y_test
 
 test.corr()
 
+
+fig,ax = plt.subplots(figsize=(12,12))
+sbs.regplot(test,x='predicted',y='true',ax=ax)
+
+
+import numpy as np
+mae_mean = abs(test['true'] - test['predicted'])
+import scipy as sp
+
+r,p = sp.stats.pearsonr(test['predicted'], test['true'])
+
+ax.text(.9, 0.05, 'r={:.2f}'.format(r),
+            transform=ax.transAxes,fontsize=20)
+
+ax.set_ylabel('Observed wind speeds (kt)',fontsize=30)
+ax.set_xlabel('Predicted wind speeds (kt)',fontsize=30)
+ax.tick_params(axis='both', which='major', labelsize=25)
 
 
 #%%

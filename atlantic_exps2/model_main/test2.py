@@ -93,13 +93,14 @@ regularizer = tf.keras.regularizers.l2(0.1)
 
 model.add(Conv2D(filters = 10, kernel_size = (5,5),padding = 'Same', 
                  activation ='relu', input_shape = (10,10,5)))
-model.add(MaxPool2D(pool_size=(2,2)))
+#model.add(MaxPool2D(pool_size=(4,4)))
 #model.add(Dropout(0.25))
 #
 model.add(Conv2D(filters = 64, kernel_size = (3,3),padding = 'Same', 
                  activation ='relu'))
 model.add(MaxPool2D(pool_size=(2,2)))
-#model.add(Dropout(0.25))
+#
+model.add(Dropout(0.25))
 # fully connected
 
 model.add(Conv2D(filters = 64, kernel_size = (3,3),padding = 'Same', 
@@ -152,3 +153,40 @@ fig,ax = plt.subplots()
 
 ax.plot(y_test)
 ax.plot(new_targets)
+
+#%%
+
+def plot_model_hist(model,test=False):
+
+    """
+    Will plot the model history for the loss and accuracy
+    """
+    fig,ax = plt.subplots(figsize=(5,5))
+    # calling the keras history object to get the loss and accuracy
+    ax.plot(model.history.history['loss'],label='loss')
+    ax.set_title('Loss and Accuracy')
+    ax.set_xlabel('Epochs')
+    ax.set_ylabel('Loss')
+    sax = ax.twinx()
+    
+    sax.plot(model.history.history['accuracy'],color='r',label='accuracy')
+    sax.set_ylabel('Accuracy')
+    fig.suptitle('Training')
+    fig.legend()
+    ax.grid()
+    # if the test set is given add the validation loss and accuracy
+    if test:
+        fig,ax = plt.subplots(figsize=(5,5))
+        ax.plot(model.history.history['val_loss'],label='loss')
+        ax.set_title('Loss and Accuracy')
+        ax.set_xlabel('Epochs')
+        ax.set_ylabel('Loss')
+        sax = ax.twinx()
+        sax.plot(model.history.history['val_accuracy'],color='r',label='accuracy')
+        sax.set_ylabel('Accuracy')
+        fig.suptitle('Validation')
+        fig.legend()
+        ax.grid()
+        
+        
+plot_model_hist(model,test=False)

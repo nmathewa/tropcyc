@@ -28,8 +28,8 @@ class prepro_features:
             center = (lat,lon)
         
         
-            lats = np.arange(latmin,latmax,1)
-            lons = np.arange(lonmin,lonmax,1)
+            lats = np.arange(latmin,latmax,0.25)
+            lons = np.arange(lonmin,lonmax,0.25)
         
             #print(len(lats))
             #print(len(lons))
