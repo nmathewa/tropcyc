@@ -24,7 +24,7 @@ cifar_data = tf.keras.datasets.cifar10.load_data()
 
 
 
-x_data = np.load(in_fol+'final_arrv3.npy')
+x_data = np.load(in_fol+'final_arr.npy')
 
 y_speeds = pd.read_csv(in_fol+'targetsv3.csv')['USA_WIND'].to_numpy()
 
