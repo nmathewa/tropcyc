@@ -18,6 +18,7 @@ in_dir = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps2/preprocessing/'
 stat_dft = pd.read_csv(in_dir+'final_events_v3.csv',index_col=None)
 
 
+
 #%%
 imgs = []
 cyc_ids = []
@@ -48,6 +49,7 @@ for ii in range(len(stat_dft)):
         
         imgs += [np.dstack(all_arrs)]
         
+
     
 
 #%%

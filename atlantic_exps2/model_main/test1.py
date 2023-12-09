@@ -28,10 +28,10 @@ def plot_model_hist(model,test=False):
     
     return fig,ax 
 #%%
-in_fol = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps2/preprocessing/'
+#in_fol = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps2/preprocessing/'
+in_fol = '/Volumes/New Volume/Other_works/tropcyc/atlantic_exps2/preprocessing/'
 
-
-cifar_data = tf.keras.datasets.cifar10.load_data()
+#cifar_data = tf.keras.datasets.cifar10.load_data()
 
 #y_labels = cifar_data[0][1]
 
