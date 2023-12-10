@@ -12,7 +12,10 @@ import numpy as np
 import glob
 import os
 
-in_files = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps2/datasets/images/'
+#in_files = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps2/datasets/images/'
+#in_files = '/Volumes/New Volume/Other_works/tropcyc/atlantic_exps2/dataset/images/'
+in_files = '/Users/nalex2023/main/tropcyc/atlantic_exps2/datasets/images/'
+
 nc_files = glob.glob(in_files+'*.nc')
 
 
@@ -26,9 +29,9 @@ nc_dft['cyclone_id'] = nc_dft['files'].str.split(os.sep).str[-1].str.split('_').
 
 nc_dft['lead_time'] = nc_dft['files'].str.split(os.sep).str[-1].str.split('_').str[1].str[:3]
 
-out_dir = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps2/preprocessing/'
+#out_dir = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps2/preprocessing/'
+
+out_dir = '/Users/nalex2023/main/tropcyc/atlantic_exps3/Preprocessing/'
 
 
-
-
-nc_dft.to_csv(out_dir+'final_events_v2.csv',index=False)
+nc_dft.to_csv(out_dir+'final_events_v1_20y.csv',index=False)

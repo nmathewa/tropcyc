@@ -13,9 +13,12 @@ import numpy as np
 import glob
 import os
 
-in_dir = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps2/preprocessing/'
+#in_dir = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps2/preprocessing/'
 
-stat_dft = pd.read_csv(in_dir+'final_events_v3.csv',index_col=None)
+in_dir = '/Users/nalex2023/main/tropcyc/atlantic_exps3/Preprocessing/'
+stat_dft_unsort = pd.read_csv(in_dir+'final_events_v1_20y.csv',index_col=None)
+
+stat_dft = stat_dft_unsort.sort_values(['cyclone_id','lead_time'])
 
 
 
@@ -72,7 +75,9 @@ support_file['lead_time'] = lead_times
 support_file.to_csv(in_dir+'support_file3.csv')
 #%%create targets 
 
-dft_speed = pd.read_csv('/home/nmathewa/main/GIT/tropcyc/atlantic_exps2/datasets/proc_tracks.csv')
+in_events = '/Users/nalex2023/main/tropcyc/atlantic_exps2/datasets/proc_tracks.csv'
+
+dft_speed = pd.read_csv(in_events)
 
 
 target_order = []
