@@ -33,14 +33,7 @@ y_speeds = pd.read_csv(in_fol+'targetsv3.csv')['USA_WIND'].to_numpy()
 
 plt.plot(y_speeds)
 
-#%%
-
-support_file = pd.read_csv(in_fol+'support_file3.csv').set_index('id')
-
-support_file['seq_no'] = support_file.groupby('id').count()['lead_time']
-
-sequences = pd.unique(support_file['seq_no'])
-
+ 
 
 
 
@@ -59,7 +52,13 @@ train_sids, test_sids = train_test_split(unique_sids,test_size=0.2,random_state=
 
 train_data = dft_sup[dft_sup['id'].isin(train_sids)]
 
+seq_train = train_data.groupby('id').count()['lead_time'].values
+
+
 test_data = dft_sup[dft_sup['id'].isin(test_sids)]
+
+seq_test = test_data.groupby('id').count()['lead_time'].values
+
 
 n_data_x,n_data_y = [],[]
 for ii in train_data.index:
@@ -141,7 +140,7 @@ from tensorflow.keras.layers import Dropout
 from tensorflow.keras.layers import MaxPooling2D
 from tensorflow.keras.layers import Flatten
 from tensorflow.keras.regularizers import l1_l2
-from keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPool2D,LSTM, Conv3D,ConvLSTM2D
+from keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPool2D,LSTM, Conv3D,ConvLSTM1D
 
 from tensorflow.keras.layers import TimeDistributed
 from tensorflow.keras.layers import ZeroPadding3D
@@ -158,7 +157,8 @@ from tensorflow.keras.layers import LSTM, Dense
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 
 
-max_len = 71
+max_len = 24
+
 
 
 # convert tjhe 3d data in to sequences
@@ -167,21 +167,46 @@ max_len = 71
 padded_seq_x = []
 padded_seq_y = [] 
 
-for ii in sequences:
+for ii in seq_train:
     frame_x = norm_x_train[:ii,:,:,:]
-    padded_seq_x += [np.pad(frame_x,((0,max_len-ii),(0,0),(0,0),(0,0)))]
+    # if the sequence is less than the max length, pad it with zeros
+    # if the sequence is greater than the max length, truncate it
+    if ii < max_len:
+        padded_seq_x += [np.pad(frame_x,((0,max_len-ii),(0,0),(0,0),(0,0)))]
+    else:
+        padded_seq_x += [frame_x[:max_len,:,:,:]]
+
     frame_y = norm_y_train[:ii]
-    padded_seq_y += [np.pad(frame_y,((0,max_len-ii)))]
+
+    if ii < max_len:
+        padded_seq_y += [np.pad(frame_y,((0,max_len-ii)))]
+    else:
+        padded_seq_y += [frame_y[:max_len]]
+    #padded_seq_x += [np.pad(frame_x,((0,max_len-ii),(0,0),(0,0),(0,0)))]
+    #frame_y = norm_y_train[:ii]
+    #padded_seq_y += [np.pad(frame_y,((0,max_len-ii)))]
     
 
 padded_x_test = []
 padded_y_test = []
 
-for ii in sequences:
+for ii in seq_test:
     frame_x = norm_x_test[:ii,:,:,:]
-    padded_x_test += [np.pad(frame_x,((0,max_len-ii),(0,0),(0,0),(0,0)))]
+    # if the sequence is less than the max length, pad it with zeros
+    # if the sequence is greater than the max length, truncate it
+
+    if ii < max_len:
+        padded_x_test += [np.pad(frame_x,((0,max_len-ii),(0,0),(0,0),(0,0)))]
+    else:
+        padded_x_test += [frame_x[:max_len,:,:,:]]
+    
     frame_y = norm_y_test[:ii]
-    padded_y_test += [np.pad(frame_y,((0,max_len-ii)))]
+
+    if ii < max_len:
+        padded_y_test += [np.pad(frame_y,((0,max_len-ii)))]
+    else:
+        padded_y_test += [frame_y[:max_len]]
+
 
 
 
@@ -189,7 +214,12 @@ for ii in sequences:
 final_x_train = np.array(padded_seq_x)
 final_y_train = np.array(padded_seq_y)
 
-from tensorflow.keras.layers import Reshape
+final_x_test = np.array(padded_x_test)
+final_y_test = np.array(padded_y_test)
+
+#%%
+from tensorflow.keras.layers import Reshape , ConvLSTM2D
+from tensorflow.keras.layers import concatenate
 from tensorflow.keras import Input
 from keras.layers import Masking
 
@@ -197,13 +227,23 @@ input_shape = final_x_train.shape
 
 
 
+
 model = Sequential()
 
+model.add(ConvLSTM2D(filters=10, kernel_size=(3, 3),
+                     input_shape=(24,40,40,9),
+                     padding='same', return_sequences=True))
 
-input_shape = norm_x_train.shape
-model = Sequential()
-model.add(Masking(mask_value=0., input_shape=input_sha))
-model.add(ConvLSTM2D(filters=64, kernel_size=(3, 3)))
+model.add(ConvLSTM2D(filters=20,kernel_size=(1,1),return_sequences=True))
+
+
+model.add(Flatten())
+
+model.add(Dense(24))
+
+
+
+
 
 #%%
 
@@ -213,14 +253,7 @@ model.compile(loss='mae',optimizer='adam')
 #%%
 
 
-#%%
-
-
-x_test = np.expand_dims(norm_x_train,axis=0)
-
-y_test = np.expand_dims(norm_y_train,axis=0)
-
-model.fit(x_test,y_test,epochs=10,steps_per_epoch=len(sequences))
+model.fit(final_x_train,final_y_train,epochs=10,steps_per_epoch=len(seq_train))
 
 
 
@@ -256,25 +289,38 @@ plot_model_hist(model)
 
 
 #%%
-new_array = np.stack(padded_x_test,axis=0)
+new_array = final_x_train
 
 
-targets = model.predict(new_array)
+targets = model.predict(final_x_test)#.reshape(max_len*len(seq_test))
+
+test_tar1 = targets[0]
+
+new_test = test_tar1*(y_test.max() - y_test.min()) + y_test.min()
+#%%
+
+
+
 
 #%%
 
+
+
+#%%
 new_targets = targets*(y_test.max() - y_test.min()) + y_test.min()
 
 
-new_targets_re = new_targets#.reshape(54*71)
 
-true_targets = np.array(padded_y_test)*((y_test.max() - y_test.min()) + y_test.min())
+
+true_targets = np.array(final_y_test.reshape(max_len*len(seq_test)))*((y_test.max() - y_test.min()) + y_test.min())
 
 #%%
 
-test = pd.DataFrame(new_targets_re,columns=['predicted'])
+test = pd.DataFrame(new_targets,columns=['predicted'])
 test['true'] = np.array(true_targets)
 
+
+test = test#[test['true'] != 0]
 
 test.corr()
 
