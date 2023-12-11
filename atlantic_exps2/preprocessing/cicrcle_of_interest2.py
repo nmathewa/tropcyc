@@ -7,13 +7,15 @@ Created on Sat Nov  4 09:49:02 2023
 """
 
 import os
-os.chdir('/home/nmathewa/main/GIT/tropcyc/modules/')
-import rioxarray as rio
-from process_ib import ib_processor
+os.chdir('/Users/nalex2023/main/tropcyc/modules/')
 from prepro_features import prepro_features
 import xarray as xr
 import pandas as pd
-in_datasets = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps/Datasets/'
+import numpy as np
+
+#in_datasets = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps/Datasets/'
+in_datasets = '/Users/nalex2023/main/tropcyc/atlantic_exps/Datasets/'
+
 
 sh_data = xr.open_dataset(in_datasets+'rh_mid_new.nc').r#.isel(time=1)
 

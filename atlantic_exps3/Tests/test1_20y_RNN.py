@@ -10,7 +10,7 @@ import tensorflow as tf
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
-
+import matplotlib.pyplot as plt
 
 #%%
 
@@ -31,7 +31,7 @@ x_data = np.load(in_fol+'final_arrv3.npy')
 
 y_speeds = pd.read_csv(in_fol+'targetsv3.csv')['USA_WIND'].to_numpy()
 
-
+plt.plot(y_speeds)
 
 #%%
 
@@ -39,8 +39,7 @@ support_file = pd.read_csv(in_fol+'support_file3.csv').set_index('id')
 
 support_file['seq_no'] = support_file.groupby('id').count()['lead_time']
 
-sequences = tf.constant(pd.unique(support_file['seq_no']))
-
+sequences = pd.unique(support_file['seq_no'])
 
 
 
@@ -48,10 +47,45 @@ sequences = tf.constant(pd.unique(support_file['seq_no']))
 #%%
 
 
-x_train, x_test, y_train, y_test = train_test_split(x_data, y_speeds, test_size=0.2, random_state=1)
+support_file = '/Users/nalex2023/main/tropcyc/atlantic_exps3/Preprocessing/support_file3.csv'
+
+dft_sup = pd.read_csv(support_file)
+
+
+unique_sids = dft_sup['id'].unique()
+
+train_sids, test_sids = train_test_split(unique_sids,test_size=0.2,random_state=1)
+
+
+train_data = dft_sup[dft_sup['id'].isin(train_sids)]
+
+test_data = dft_sup[dft_sup['id'].isin(test_sids)]
+
+n_data_x,n_data_y = [],[]
+for ii in train_data.index:
+    n_data_x += [x_data[ii,:,:,:]]
+    n_data_y += [y_speeds[ii]]
+    
+ 
+x_train = np.array(n_data_x)
+y_train = np.array(n_data_y)               
 
 
 
+n_data_x,n_data_y = [],[]
+for ii in test_data.index:
+    n_data_x += [x_data[ii,:,:,:]]
+    n_data_y += [y_speeds[ii]]
+
+x_test = np.array(n_data_x)
+y_test = np.array(n_data_y)
+
+
+
+
+
+
+#%%
 from sklearn.preprocessing import MinMaxScaler
 
 scaler = MinMaxScaler()
@@ -93,6 +127,10 @@ norm_x_test = (x_test - min_vals)/(np.array(max_vals) - np.array(min_vals))
 
 norm_y_test = (y_test - y_test.min())/(y_test.max() - y_test.min())
 
+
+
+
+
 #%% Sequencing
 
 from tensorflow.keras.models import Sequential
@@ -103,61 +141,92 @@ from tensorflow.keras.layers import Dropout
 from tensorflow.keras.layers import MaxPooling2D
 from tensorflow.keras.layers import Flatten
 from tensorflow.keras.regularizers import l1_l2
-from keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPool2D,LSTM
+from keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPool2D,LSTM, Conv3D,ConvLSTM2D
+
 from tensorflow.keras.layers import TimeDistributed
 from tensorflow.keras.layers import ZeroPadding3D
 
+from tensorflow.keras.preprocessing.sequence import pad_sequences
 
-x_train_new = ZeroPadding3D(padding=(24,40,40))(x_train)
+
+
+
+
+#%%
+
+from tensorflow.keras.layers import LSTM, Dense
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+
+
+max_len = 71
+
+
+# convert tjhe 3d data in to sequences
+
+
+padded_seq_x = []
+padded_seq_y = [] 
+
+for ii in sequences:
+    frame_x = norm_x_train[:ii,:,:,:]
+    padded_seq_x += [np.pad(frame_x,((0,max_len-ii),(0,0),(0,0),(0,0)))]
+    frame_y = norm_y_train[:ii]
+    padded_seq_y += [np.pad(frame_y,((0,max_len-ii)))]
+    
+
+padded_x_test = []
+padded_y_test = []
+
+for ii in sequences:
+    frame_x = norm_x_test[:ii,:,:,:]
+    padded_x_test += [np.pad(frame_x,((0,max_len-ii),(0,0),(0,0),(0,0)))]
+    frame_y = norm_y_test[:ii]
+    padded_y_test += [np.pad(frame_y,((0,max_len-ii)))]
+
+
+
+
+final_x_train = np.array(padded_seq_x)
+final_y_train = np.array(padded_seq_y)
+
+from tensorflow.keras.layers import Reshape
+from tensorflow.keras import Input
+from keras.layers import Masking
+
+input_shape = final_x_train.shape
+
+
+
+model = Sequential()
+
+
+input_shape = norm_x_train.shape
+model = Sequential()
+model.add(Masking(mask_value=0., input_shape=input_sha))
+model.add(ConvLSTM2D(filters=64, kernel_size=(3, 3)))
+
+#%%
+
+model.compile(loss='mae',optimizer='adam')
 
 
 #%%
 
 
-
-model = Sequential()
-#
-
-regularizer = tf.keras.regularizers.l2(0.1)
-
-model.add(Conv2D(filters = 32, kernel_size = (1,1),padding = 'Same', 
-                 activation ='relu', input_shape = (40,40,9)))
-model.add(MaxPool2D(pool_size=(4,4)))
-#model.add(Dropout(0.25))
-#
-model.add(Conv2D(filters = 32, kernel_size = (3,3),padding = 'Same', 
-                 activation ='relu'))
-#model.add(MaxPool2D(pool_size=(4,4)))
-#
-model.add(Dropout(0.25))
-# fully connected
-
-model.add(Conv2D(filters = 64, kernel_size = (3,3),padding = 'Same', 
-                 activation ='relu'))
-#model.add(MaxPool2D(pool_size=(4,4)))
+#%%
 
 
-#model.add(Dropout(0.3))
+x_test = np.expand_dims(norm_x_train,axis=0)
+
+y_test = np.expand_dims(norm_y_train,axis=0)
+
+model.fit(x_test,y_test,epochs=10,steps_per_epoch=len(sequences))
 
 
 
-model.add(Conv2D(filters = 32, kernel_size = (1,1),padding = 'Same', 
-                 activation ='relu',kernel_regularizer=regularizer))
-model.add(MaxPool2D(pool_size=(2,2)))
-
-#model.add(Dropout(0.3))
-
-model.add(Flatten())
-model.add(Dense(32, activation = "relu",))
-model.add(Dropout(0.1))
-model.add(Dense(1, activation = "relu"))
 
 
 
-callback = tf.keras.callbacks.EarlyStopping(monitor='loss',patience=4)
-
-model.compile(optimizer='adam' , loss = "mae", metrics=["accuracy"])        
-model.fit(norm_x_train,norm_y_train,epochs=100,callbacks=[callback])
 
 #%%
 
@@ -187,17 +256,25 @@ plot_model_hist(model)
 
 
 #%%
-targets = model.predict(norm_x_test)
+new_array = np.stack(padded_x_test,axis=0)
+
+
+targets = model.predict(new_array)
 
 #%%
 
 new_targets = targets*(y_test.max() - y_test.min()) + y_test.min()
 
 
+new_targets_re = new_targets#.reshape(54*71)
+
+true_targets = np.array(padded_y_test)*((y_test.max() - y_test.min()) + y_test.min())
+
 #%%
 
-test = pd.DataFrame(new_targets,columns=['predicted'])
-test['true'] = y_test
+test = pd.DataFrame(new_targets_re,columns=['predicted'])
+test['true'] = np.array(true_targets)
+
 
 test.corr()
 
