@@ -11,14 +11,14 @@ import pandas as pd
 import xarray as xr
 import numpy as np
 
-main_dir = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps/Datasets/'
+#main_dir = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps/Datasets/'
+
+main_dir = '/Users/nalex2023/main/tropcyc/atlantic_exps/Datasets/'
 
 
 
 
-
-
-ib_data = pd.read_csv(main_dir+'final_filtered_storms.csv').dropna(how='any',axis=1)
+ib_data = pd.read_csv(main_dir+'final_filtered_storms1980.csv').dropna(how='any',axis=1)
 
 
 
@@ -31,11 +31,11 @@ ib_data_tracks = ib_data[['SID','datetime','LAT','LON','USA_WIND','DIST2LAND']]
 
 
 
-rh_data = pd.read_csv(main_dir+'mean_rh.csv').dropna(how='any',axis=0)
+#rh_data = pd.read_csv(main_dir+'mean_rh.csv').dropna(how='any',axis=0)
 
-temp_data = pd.read_csv(main_dir+'sst_temp_test.csv')
+#temp_data = pd.read_csv(main_dir+'sst_temp_test.csv')
 
-pres_data = pd.read_csv(main_dir+'test1_pres.csv')
+#pres_data = pd.read_csv(main_dir+'test1_pres.csv')
 
 
 
@@ -105,7 +105,7 @@ mean_diff = idx_24['USA_WIND'].diff().mean()
 #%%
 
 
-ib_data_tracks2.to_csv(main_dir+'final_proc.csv')
+ib_data_tracks2.to_csv(main_dir+'final_proc1980.csv')
 
 
 

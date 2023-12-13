@@ -22,7 +22,7 @@ class ib_processor:
         
         self.final_data = req_cols
         
-    def filter_data(self,data=None,y1=2000,y2=2023,basin='NA'):
+    def filter_data(self,data=None,y1=1980,y2=2023,basin='NA'):
         
         if data is None:
             fil_data = self.final_data
@@ -60,15 +60,15 @@ class ib_processor:
             
             n_timed['lead'] = hour_ranges
             
-            n_timed['scale'] =pd.cut(n_timed['USA_WIND'],bins=[0,33,63,82,95,112,136,137],
-                                         labels=['TD','TS','CAT1','CAT2','CAT3','CAT4','CAT5'])
+            #n_timed['scale'] =pd.cut(n_timed['USA_WIND'],bins=[0,33,63,82,95,112,136,137],
+                                         #labels=['TD','TS','CAT1','CAT2','CAT3','CAT4','CAT5'])
          
             
-            chg_24 = n_timed[n_timed['lead'] <= 24]['USA_WIND']
+            #chg_24 = n_timed[n_timed['lead'] <= 24]['USA_WIND']
             
-            mean_change = chg_24.diff().mean()
+            #mean_change = chg_24.diff().mean()
             
-            n_timed['pers'] = [mean_change]*len(n_timed) 
+            #n_timed['pers'] = [mean_change]*len(n_timed) 
             
             n_timed_fil = n_timed.dropna(how='any',axis=0)
             

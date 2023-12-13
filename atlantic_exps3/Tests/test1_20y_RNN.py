@@ -37,6 +37,7 @@ plt.plot(y_speeds)
 
 
 
+
 #%%
 
 
@@ -209,6 +210,7 @@ for ii in seq_test:
 
 
 
+new_shape = np.array(padded_seq_x)
 
 
 final_x_train = np.array(padded_seq_x)
@@ -216,34 +218,43 @@ final_y_train = np.array(padded_seq_y)
 
 final_x_test = np.array(padded_x_test)
 final_y_test = np.array(padded_y_test)
-
 #%%
-from tensorflow.keras.layers import Reshape , ConvLSTM2D
-from tensorflow.keras.layers import concatenate
-from tensorflow.keras import Input
-from keras.layers import Masking
 
-input_shape = final_x_train.shape
+final_x_train1 =  final_x_train.reshape(final_x_train.shape[0],final_x_train.shape[1],1
+                                        ,final_x_train.shape[2],final_x_train.shape[3],
+                                        final_x_train.shape[4])
 
+final_x_test1 =  final_x_test.reshape(final_x_test.shape[0],final_x_test.shape[1],1
+                                        ,final_x_test.shape[2],final_x_test.shape[3],
+                                        final_x_test.shape[4])
+#%%
 
+norm_x_trainX = np.array(norm_x_train).reshape(4573,1,40,40,9)
+norm_x_testX = np.array(norm_x_test).reshape(1187,1,40,40,9)
 
 
 model = Sequential()
+model.add(TimeDistributed(Conv2D(32,(3,3),activation='relu'),input_shape=(1,40,40,9)))
+model.add(TimeDistributed(MaxPooling2D(pool_size=(2,2))))
 
-model.add(ConvLSTM2D(filters=10, kernel_size=(3, 3),
-                     input_shape=(24,40,40,9),
-                     padding='same', return_sequences=True))
+model.add(TimeDistributed(Conv2D(32,(3,3),activation='relu')))
+#model_mix_shoulder.add(TimeDistributed(Conv2D(128,(3,3),activation='relu')))
+#model_mix_shoulder.add(TimeDistributed(Conv2D(56,(3,3),activation='relu')))
+model.add(TimeDistributed(MaxPooling2D(pool_size=(2,2))))
 
-model.add(ConvLSTM2D(filters=20,kernel_size=(1,1),return_sequences=True))
-
-
-model.add(Flatten())
-
-model.add(Dense(24))
-
+#model_mix_shoulder.add(TimeDistributed(Conv2D(256,(3,3),activation='relu')))
+#model_mix_shoulder.add(TimeDistributed(MaxPooling2D(pool_size=(2,2))))
 
 
+model.add(TimeDistributed(Flatten()))
 
+#RNN
+model.add(LSTM(128,return_sequences=False))
+
+model.add(Dense(1,activation='relu'))
+#model.add(activation('sigmoid'))
+
+#model.summary()
 
 #%%
 
@@ -253,13 +264,15 @@ model.compile(loss='mae',optimizer='adam')
 #%%
 
 
-model.fit(final_x_train,final_y_train,epochs=10,steps_per_epoch=len(seq_train))
+model.fit(final_x_train1,final_x_train1,epochs=10)
 
 
 
+#%%
 
+targets = model.predict(norm_x_testX)
 
-
+plt.plot(targets)
 
 #%%
 
@@ -289,14 +302,10 @@ plot_model_hist(model)
 
 
 #%%
-new_array = final_x_train
 
 
-targets = model.predict(final_x_test)#.reshape(max_len*len(seq_test))
 
-test_tar1 = targets[0]
-
-new_test = test_tar1*(y_test.max() - y_test.min()) + y_test.min()
+new_test = targets*(y_test.max() - y_test.min()) + y_test.min()
 #%%
 
 
@@ -312,7 +321,7 @@ new_targets = targets*(y_test.max() - y_test.min()) + y_test.min()
 
 
 
-true_targets = np.array(final_y_test.reshape(max_len*len(seq_test)))*((y_test.max() - y_test.min()) + y_test.min())
+true_targets = np.array(norm_y_test)*((y_test.max() - y_test.min()) + y_test.min())
 
 #%%
 
@@ -360,7 +369,6 @@ test_new.evaluate(norm_x_train,norm_y_train)
 #%%
 
 test_new.predict(norm_x_test)
-
 
 
 

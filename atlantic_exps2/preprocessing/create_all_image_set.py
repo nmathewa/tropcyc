@@ -16,7 +16,8 @@ import os
 #in_dir = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps2/preprocessing/'
 
 in_dir = '/Users/nalex2023/main/tropcyc/atlantic_exps3/Preprocessing/'
-stat_dft_unsort = pd.read_csv(in_dir+'final_events_v1_20y.csv',index_col=None)
+
+stat_dft_unsort = pd.read_csv(in_dir+'final_events_v1_43y.csv',index_col=None)
 
 stat_dft = stat_dft_unsort.sort_values(['cyclone_id','lead_time'])
 
@@ -61,7 +62,7 @@ for ii in range(len(stat_dft)):
 final_images = np.stack(imgs,axis=0)
 
 
-np.save(in_dir+'final_arrv3.npy',final_images)
+np.save(in_dir+'final_arrv4.npy',final_images)
 
 #%%
 
@@ -72,7 +73,7 @@ support_file['lead_time'] = lead_times
 
 #%% create targets 
 
-support_file.to_csv(in_dir+'support_file3.csv')
+support_file.to_csv(in_dir+'support_file4.csv')
 #%%create targets 
 
 in_events = '/Users/nalex2023/main/tropcyc/atlantic_exps2/datasets/proc_tracks.csv'

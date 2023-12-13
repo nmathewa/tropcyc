@@ -6,12 +6,12 @@ Created on Wed Nov  1 14:29:35 2023
 @author: nmathewa
 """
 import os
-os.chdir('/home/nmathewa/main/GIT/tropcyc/modules/')
+os.chdir('/Users/nalex2023/main/tropcyc/modules/')
 
 from process_ib import ib_processor
 
-out_dir = ''
-filename = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps/Datasets/ibtracs.NA.list.v04r00.csv'
+
+filename = '/Users/nalex2023/main/tropcyc/atlantic_exps/Datasets/ibtracs.NA.list.v04r00.csv'
 
 
 ib_proc = ib_processor(csv_loc=filename)
@@ -22,4 +22,4 @@ all_dft = ib_proc.compute_cols(data=fil_dft)
 
 
 
-all_dft.to_csv("/home/nmathewa/main/GIT/tropcyc/atlantic_exps2/datasets/proc_tracks.csv")
+all_dft.to_csv("/Users/nalex2023/main/tropcyc/atlantic_exps2/datasets/proc_tracks.csv")

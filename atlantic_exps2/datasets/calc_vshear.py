@@ -7,9 +7,16 @@ calc vertical shear
 """
 
 import xarray as xr
-loc = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps/Datasets/u_comp/'
-vloc = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps/Datasets/v_comp/'
- 
+#loc = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps/Datasets/u_comp/'
+#vloc = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps/Datasets/v_comp/'
+
+
+
+#%%
+
+
+
+#%%
 
 def preprocess(uvdata):
     try :

@@ -11,7 +11,10 @@ import os
 from global_land_mask import globe
 import numpy as np
 
-os.chdir("/home/nmathewa/main/GIT/tropcyc/atlantic_exps/Datasets/")
+#os.chdir("/home/nmathewa/main/GIT/tropcyc/atlantic_exps/Datasets/")
+
+os.chdir('/Users/nalex2023/main/tropcyc/atlantic_exps/Datasets/')
+
 
 dft = pd.read_csv('ibtracs.NA.list.v04r00.csv',keep_default_na=False)
 
@@ -22,7 +25,7 @@ n_dft = dft.iloc[1:,:]
 
 n_dft['datetime'] = pd.to_datetime(n_dft['ISO_TIME'],format='%Y-%m-%d %H:%M:%S')
 
-year_mask = (n_dft['datetime'] > '2000-1-1') & (n_dft['datetime'] <= '2023-12-31')
+year_mask = (n_dft['datetime'] > '1980-1-1') & (n_dft['datetime'] <= '2023-12-31')
 period_new = n_dft[year_mask][n_dft['BASIN'] == 'NA']
 
 
@@ -57,6 +60,7 @@ persist_storms['month']= persist_storms['datetime'].dt.month
 tesst = persist_storms[persist_storms['NUMBER'] == 40]
 
 
+#%%
 def mask_lands(df):
     ordered_df = df.sort_values(by='datetime')
     lat = ordered_df['LAT']
@@ -97,7 +101,7 @@ req_cols = ['SID','SEASON','NUMBER','BASIN','SUBBASIN',
 final_storms = ocean_only[req_cols]
 
 
-final_storms.to_csv('final_filtered_storms.csv')
+final_storms.to_csv('final_filtered_storms1980.csv')
 
 
 
