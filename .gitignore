@@ -2,3 +2,8 @@
 *.grib2
 *.csv
 *.npy
+*.mp4
+*.svg
+*.png
+*.jpg
+*.tex
