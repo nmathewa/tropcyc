@@ -23,10 +23,6 @@ ib_data = pd.read_csv(main_dir+'final_filtered_storms1980.csv').dropna(how='any'
 
 
 
-
-
-
-
 ib_data_tracks = ib_data[['SID','datetime','LAT','LON','USA_WIND','DIST2LAND']]
 
 
