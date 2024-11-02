@@ -14,9 +14,9 @@ from sklearn.model_selection import train_test_split
 
 #%%
 
-in_fol = '/Volumes/New Volume/Other_works/tropcyc/atlantic_exps2/preprocessing/'
+#in_fol = '/Volumes/New Volume/Other_works/tropcyc/atlantic_exps2/preprocessing/'
 #in_fol = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps2/preprocessing/'
-
+in_fol = '/media/nmathewa/nma_backup/Datasets/Other_works/tropcyc/atlantic_exps2/preprocessing/'
 
 #cifar_data = tf.keras.datasets.cifar10.load_data()
 

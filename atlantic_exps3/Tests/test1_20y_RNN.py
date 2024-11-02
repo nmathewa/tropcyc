@@ -15,8 +15,8 @@ import matplotlib.pyplot as plt
 #%%
 
 #in_fol = '/Volumes/New Volume/Other_works/tropcyc/atlantic_exps2/preprocessing/'
-#in_fol = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps2/preprocessing/'
-in_fol = '/Users/nalex2023/main/tropcyc/atlantic_exps3/Preprocessing/'
+in_fol = '/media/nmathewa/nma_backup/Datasets/Other_works/tropcyc/atlantic_exps3/preprocessing/'
+#in_fol = '/Users/nalex2023/main/tropcyc/atlantic_exps3/Preprocessing/'
 
 
 #cifar_data = tf.keras.datasets.cifar10.load_data()
@@ -41,9 +41,9 @@ plt.plot(y_speeds)
 #%%
 
 
-support_file = '/Users/nalex2023/main/tropcyc/atlantic_exps3/Preprocessing/support_file3.csv'
+support_file = 'support_file3.csv'
 
-dft_sup = pd.read_csv(support_file)
+dft_sup = pd.read_csv(in_fol+support_file)
 
 
 unique_sids = dft_sup['id'].unique()
@@ -257,14 +257,15 @@ model.add(Dense(1,activation='relu'))
 #model.summary()
 
 #%%
-
-model.compile(loss='mae',optimizer='adam')
+with tf.device('/GPU:0'):
+    model.compile(loss='mae',optimizer='adam')
 
 
 #%%
 
+with tf.device('/GPU:0'):
 
-model.fit(final_x_train1,final_x_train1,epochs=10)
+    model.fit(final_x_train1,final_x_train1,epochs=10)
 
 
 

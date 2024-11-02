@@ -18,6 +18,7 @@ class prepro_features:
     
     def angular_imgs(self,var_dset,lat,lon,radius=1000,test=False,box=False):
         if isinstance(var_dset,float):
+            print('float based boundaries not supported')
             raise NotImplementedError
         
         else :

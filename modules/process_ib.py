@@ -6,16 +6,21 @@ Created on Wed Nov  1 14:36:36 2023
 @author: nmathewa
 """
 import pandas as pd
-import numpy as np
-
+try:
+    import cupy as np
+    print('using cupy')
+except ImportError:
+    print('using numpy')
+    import numpy as np
 
 class ib_processor:
     '''
-    inputs:
+    inputs: csv location
+
     '''
     def __init__(self,csv_loc,all_cols=True):
         
-        read_data = pd.read_csv(csv_loc,keep_default_na=False).iloc[1:,:]
+        read_data = pd.read_csv(csv_loc,keep_default_na=False,low_memory=False).iloc[1:,:]
         read_data['datetime'] = pd.to_datetime(read_data['ISO_TIME'],format='%Y-%m-%d %H:%M:%S')
 
         req_cols = read_data[['datetime','SID','LAT','LON','USA_WIND','DIST2LAND','BASIN']]
@@ -23,7 +28,7 @@ class ib_processor:
         self.final_data = req_cols
         
     def filter_data(self,data=None,y1=1980,y2=2023,basin='NA'):
-        
+        print('Filtering data for the period {} to {}'.format(y1,y2))
         if data is None:
             fil_data = self.final_data
         else:

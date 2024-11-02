@@ -17,7 +17,8 @@ import matplotlib.pyplot as plt
 
 #in_fol = '/Volumes/New Volume/Other_works/tropcyc/atlantic_exps2/preprocessing/'
 #in_fol = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps2/preprocessing/'
-in_fol = '/Users/nalex2023/main/tropcyc/atlantic_exps3/Preprocessing/'
+#in_fol = '/Users/nalex2023/main/tropcyc/atlantic_exps3/Preprocessing/'
+in_fol = '/media/nmathewa/nma_backup/Datasets/Other_works/tropcyc/atlantic_exps3/preprocessing/'
 
 
 #cifar_data = tf.keras.datasets.cifar10.load_data()
@@ -42,9 +43,9 @@ plt.plot(y_speeds)
 #%%
 
 
-support_file = '/Users/nalex2023/main/tropcyc/atlantic_exps3/Preprocessing/support_file4.csv'
+support_file = 'support_file4.csv'
 
-dft_sup = pd.read_csv(support_file)
+dft_sup = pd.read_csv(in_fol+support_file)
 
 
 unique_sids = dft_sup['id'].unique()
@@ -184,12 +185,13 @@ model.add(Dense(1,activation='relu'))
 
 #model.summary()
 
-#%%
+#%%time
 
 callback = tf.keras.callbacks.EarlyStopping(monitor='loss',patience=4)
 
-model.compile(optimizer='adam' , loss = "mae", metrics=["accuracy"])        
-model.fit(norm_x_trainX,norm_y_train,epochs=100,callbacks=[callback])
+model.compile(optimizer='adam' , loss = "mae", metrics=["accuracy"])
+with tf.device('/GPU:0'):        
+    %time model.fit(norm_x_trainX,norm_y_train,epochs=100,callbacks=[callback])
 
 
 #%%
@@ -279,8 +281,8 @@ ax.tick_params(axis='both', which='major', labelsize=25)
 
 
 #%%
-out_dir = '/Users/nalex2023/main/tropcyc/atlantic_exps3/Preprocessing/Results/'
-out_model = model.save_weights(out_dir+'no_RNN_tes1')
+out_dir = in_fol
+out_model = model.save_weights(out_dir+'no_RNN_tes1.weights.h5')
 
 #%%
 model.save(out_dir+'no_RNN_tes1.keras')
