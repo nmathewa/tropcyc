@@ -14,7 +14,7 @@ import xarray as xr
 import pandas as pd
 import numpy as np
 #in_datasets = '/home/nmathewa/main/GIT/tropcyc/atlantic_exps/Datasets/'
-in_datasets = '/Users/nalex2023/main/tropcyc/atlantic_exps3/Datasets/ERA5_processed_40/'
+in_datasets = '/media/nmathewa/nma_backup/Datasets/Other_works/atlantic_exps/Datasets/'
 
 sh_data = xr.open_dataset(in_datasets+'RH_data40y.nc').r#.isel(time=1)
 
