@@ -1,0 +1,3 @@
+[submodule "website/theme"]
+	path = website/theme
+	url = https://github.com/nmathewa/academic-site-template.git

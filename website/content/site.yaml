@@ -1,0 +1,19 @@
+# Shared settings for every page (a page's own front matter overrides these).
+site: tropcyc
+eyebrow: Tropical cyclone intensity · machine learning on tropycal
+author:
+  - Nirmal Mathew Alex
+affiliation: Florida Institute of Technology
+logo: assets/img/logo.svg
+root: ""
+link-citations: true
+nav:
+  - title: Overview
+    href: index.html
+  - title: Method
+    href: method.html
+  - title: Run it
+    href: run.html
+  - title: Code
+    href: https://github.com/nmathewa/tropcyc
+footer: "Nirmal Mathew Alex · Florida Institute of Technology · Experimental research output, not an official forecast"

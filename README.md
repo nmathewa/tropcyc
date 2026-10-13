@@ -114,6 +114,19 @@ live because ERA5 is published about five days late. Docker: see `Dockerfile`.
 
 This is experimental research output, not an official forecast.
 
+## Website
+
+`website/` holds the project site, written in Markdown and built with pandoc and the
+[academic-site-template](https://github.com/nmathewa/academic-site-template) (submodule
+`website/theme`): `make -C website serve`. The **website** workflow (Actions tab, run
+manually) deploys it to GitHub Pages.
+
+## Training everything
+
+`scripts/train_all.sh` runs the whole pipeline (tracks, baselines, ERA5 environment,
+pre-training, GFS environment, fine-tuning); each step is cached and resumable.
+`HURDAT=path/to/hurdat2.txt` uses a local HURDAT2 file instead of downloading.
+
 ## Layout
 
 ```
