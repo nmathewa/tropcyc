@@ -83,8 +83,20 @@ def _name(row) -> str:
     """Storm name; unnamed depressions carry a spelled-out number (often truncated) instead."""
     n = re.sub(r"[^A-Z0-9 \-]", "", str(row.name).upper()).strip()  # outside data: plain text only
     if not n or n.split("-")[0] in NUMBER_WORDS:
-        return f"Depression {row.sid[:3]}"
+        return f"Depression {_sid(row)}"
     return n.title()
+
+
+def _sid(row) -> str:
+    """Short storm id for display: ATCF 'EP202026' -> 'EP20', TC vitals '20E2026' -> '20E'."""
+    s = str(row.sid)
+    return s[:4] if s[:2].isalpha() else s[:3]
+
+
+BASIN_NAMES = {"north_atlantic": "North Atlantic", "east_pacific": "East Pacific",
+               "west_pacific": "West Pacific", "north_indian": "North Indian",
+               "south_indian": "South Indian", "south_pacific": "South Pacific",
+               "south_atlantic": "South Atlantic", "australia": "Australian region"}
 
 
 def _signed(v: float) -> str:
@@ -97,7 +109,10 @@ def _position(lat, lon) -> str:
     return f"{abs(lat):.1f}° {'N' if lat >= 0 else 'S'}, {abs(lon):.1f}° {'E' if lon >= 0 else 'W'}"
 
 
-def forecast_page(bundle: dict, tracks: pd.DataFrame, fc: pd.DataFrame, issued: pd.Timestamp) -> str:
+def forecast_page(bundle: dict, tracks: pd.DataFrame, fc: pd.DataFrame, issued: pd.Timestamp,
+                  storms: dict | None = None, maps: dict | None = None, sources=()) -> str:
+    """`storms`: tropycal storm dicts by id; `maps`: {'overview' | sid: image path relative to the page}."""
+    storms, maps = storms or {}, maps or {}
     lines = ["---", "title: Live forecast",
              f"subtitle: 24-hour intensity forecasts for active tropical cyclones, issued {issued:%d %b %Y %H} UTC",
              f"date: {issued:%d %B %Y}", "contents: false", "---", "",
@@ -105,31 +120,47 @@ def forecast_page(bundle: dict, tracks: pd.DataFrame, fc: pd.DataFrame, issued: 
              "**Experimental research output, not an official forecast.** For decisions use the "
              "National Hurricane Center, the Joint Typhoon Warning Center, or your national "
              "weather service.", ":::", ""]
+    if "overview" in maps:
+        names = ", ".join(sorted(str(d.get("name", k)).title() for k, d in storms.items()))
+        lines += ["```{=html}", '<figure id="fig:overview">',
+                  f'<img src="{maps["overview"]}" alt="Map of the tracks of all active tropical cyclones: {html.escape(names)}" width="100%">',
+                  "<figcaption>Every active tropical cyclone, track coloured by Saffir–Simpson category "
+                  "(map drawn with tropycal).</figcaption>", "</figure>", "```", ""]
     if fc.empty:
-        lines += ["No active tropical cyclones with 24 h of track at the latest cycle.", ""]
+        lines += ["No active tropical cyclone has 24 h of track yet, so there is no forecast this cycle.", ""]
         return "\n".join(lines)
-    basin = tracks.groupby("sid")["basin"].last() if "basin" in tracks else pd.Series(dtype=str)
+    basin = {k: BASIN_NAMES.get(str(d.get("basin", "")), "") for k, d in storms.items()}
+    if not basin and "basin" in tracks:
+        basin = tracks.groupby("sid")["basin"].last().to_dict()
+    feeds = " and ".join(sources) if sources else "NHC / JTWC TC vitals"
     model = {"gbm": "gradient boosting"}.get(bundle["name"], bundle["name"])
     lines += [f"Model: **{model}**, from track predictors only (see [Results](results.html)). "
-              "Storm positions and intensities are the latest NHC / JTWC TC vitals in the GFS "
-              f"{issued:%H} UTC cycle.", "",
+              f"Storm positions and intensities: {feeds}, latest fix {issued:%d %b %H} UTC.", "",
               '::: {style="overflow-x:auto"}',  # 7 columns: scroll inside on phones, never the page
               "| storm | basin | last fix (UTC) | position | now (kt) | 24 h change (kt) | forecast (kt) |",
               "|:--|:--|:--|:--|--:|--:|--:|"]
     for r in fc.sort_values("vmax", ascending=False).itertuples():
-        label = _name(r) if _name(r).startswith("Depression") else f"{_name(r)} ({r.sid[:3]})"
+        label = _name(r) if _name(r).startswith("Depression") else f"{_name(r)} ({_sid(r)})"
         lines.append(f"| {label} | {basin.get(r.sid, '')} | {r.time:%d %b %H}:00 | "
                      f"{_position(r.lat, r.lon)} | {r.vmax:.0f} | {_signed(r.dv_24)} | **{r.vmax_24:.0f}** |")
     lines += ["", "Table: Active storms and their forecast maximum wind 24 h after the last fix. {#tbl:live}",
               ":::", ""]
     for r in fc.sort_values("vmax", ascending=False).itertuples():
         hist = tracks[(tracks["sid"] == r.sid) & (tracks["time"] <= r.time)].tail(9)
-        title = _name(r) if _name(r).startswith("Depression") else f"{_name(r)} ({r.sid[:3]})"
+        title = _name(r) if _name(r).startswith("Depression") else f"{_name(r)} ({_sid(r)})"
+        storm_map = []
+        if r.sid in maps:
+            storm_map = ["```{=html}", f'<figure id="fig:map-{r.sid}">',
+                         f'<img src="{maps[r.sid]}" alt="Track map of {html.escape(_name(r))}" width="100%">',
+                         f"<figcaption>Track of {html.escape(_name(r))} coloured by Saffir–Simpson category; "
+                         "the star is the last fix and the label gives the tropcyc 24 h forecast "
+                         "(map drawn with tropycal).</figcaption>", "</figure>", "```", ""]
         lines += [f"## {title}", "",
                   f"Last fix {r.time:%d %b %H} UTC at {_position(r.lat, r.lon)}: {r.vmax:.0f} kt"
                   + (f", {r.mslp:.0f} hPa" if pd.notna(r.mslp) else "")
                   + f"; {_signed(r.dvmax_24)} kt over the previous 24 h. "
                   f"Forecast for {r.valid_time:%d %b %H} UTC: **{r.vmax_24:.0f} kt** ({_signed(r.dv_24)} kt).", "",
+                  *storm_map,
                   "```{=html}", f'<figure id="fig:{r.sid}">', storm_chart(hist, r),
                   f"<figcaption>Maximum sustained wind of {html.escape(_name(r))}: observed over the last "
                   "48 h (solid) and the 24 h forecast (dashed). Dotted lines mark tropical-storm, "
@@ -181,7 +212,28 @@ def results_page(scores: pd.DataFrame, n_storms: int, years: str) -> str:
         "environmental fields, is built to address this; it is not trained yet.", ":::", ""])
 
 
-def write_site(bundle, tracks, fc, scores, out_dir, issued, n_storms, years):
+def draw_maps(storms: dict, fc: pd.DataFrame, img_dir) -> dict:
+    """tropycal maps for the live page; returns {'overview' | sid: path relative to the page}."""
+    from .livemaps import plot_overview, plot_storm
+
+    img_dir = Path(img_dir)
+    img_dir.mkdir(parents=True, exist_ok=True)
+    for old in img_dir.glob("*.png"):  # storms that are gone should not linger
+        old.unlink()
+    rel = f"img/{img_dir.name}"
+    maps = {}
+    if storms:
+        plot_overview(storms, img_dir / "overview.png")
+        maps["overview"] = f"{rel}/overview.png"
+    for r in fc.itertuples():
+        if r.sid in storms:
+            plot_storm(storms[r.sid], img_dir / f"{r.sid}.png", r)
+            maps[r.sid] = f"{rel}/{r.sid}.png"
+    return maps
+
+
+def write_site(bundle, tracks, fc, scores, out_dir, issued, n_storms, years, storms=None, sources=()):
     out = Path(out_dir)
-    (out / "forecast.md").write_text(forecast_page(bundle, tracks, fc, issued))
+    maps = draw_maps(storms, fc, out / "img" / "live") if storms is not None else {}
+    (out / "forecast.md").write_text(forecast_page(bundle, tracks, fc, issued, storms, maps, sources))
     (out / "results.md").write_text(results_page(scores, n_storms, years))

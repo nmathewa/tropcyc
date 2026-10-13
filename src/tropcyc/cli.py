@@ -198,18 +198,20 @@ def cmd_rolling(a):
 
 
 def cmd_site_update(a):
+    from .livemaps import active_storms, to_tracks
     from .serving import forecast, load_bundle
     from .sitegen import write_site
-    from .tcvitals import fetch_recent
 
     bundle = load_bundle(a.model)
-    tracks = fetch_recent(48)
+    storms, sources = active_storms()  # tropycal realtime where reachable, TC vitals for the rest
+    tracks = to_tracks(storms)
     fc = forecast(bundle, tracks)
     scores = pd.read_csv(a.scores)
     hist = _read_table(a.tracks)
     years = f"{hist['time'].min():%Y}–{hist['time'].max():%Y}"
     issued = tracks["time"].max() if len(tracks) else pd.Timestamp.utcnow().tz_localize(None).floor("6h")
-    write_site(bundle, tracks, fc, scores, a.out, issued, hist["sid"].nunique(), years)
+    write_site(bundle, tracks, fc, scores, a.out, issued, hist["sid"].nunique(), years,
+               storms=storms, sources=sources)
     print(f"{len(fc)} storm forecasts, issued {issued:%Y-%m-%d %H} UTC -> {a.out}/forecast.md, results.md")
 
 
