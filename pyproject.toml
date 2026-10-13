@@ -60,5 +60,10 @@ target-version = "py310"
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
 
+[tool.ruff.lint.per-file-ignores]
+# inline SVG markup and fixed-width TC vitals records read better unwrapped
+"src/tropcyc/sitegen.py" = ["E501"]
+"tests/test_tcvitals.py" = ["E501"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

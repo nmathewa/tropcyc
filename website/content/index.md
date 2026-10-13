@@ -108,23 +108,23 @@ details.
 
 ## Results
 
-::: caveat
-**Not trained yet.** The code, data pipeline and tests are complete, and every data
-source has been checked on real cases (Hurricanes Ian 2022 and Milton 2024). The models
-have not yet been trained on the full record. The scores will appear here, by held-out
-season, against persistence, once that training run is done.
-:::
+The track-only models are trained, on operational TC vitals from all basins
+(2021–2026). Scored season by season on storms they never saw, gradient boosting beats
+persistence in every season, by 13–20 % in mean absolute error. It rarely catches rapid
+intensification. The [Results](results.html) page has the full tables, and the
+[Live forecast](forecast.html) page runs the model on today's storms.
 
-Results will be reported as mean absolute error of $\Delta v_{24}$, skill over
-persistence, $\text{skill} = 100\,(1 - \text{MAE}/\text{MAE}_\text{persistence})$, and RI
-probability of detection, false-alarm ratio and critical success index. The test seasons
-are held out entirely: no storm contributes to both training and testing.
+::: caveat
+**The storm transformer is not trained yet.** It needs the long ERA5 record of best-track
+storms for pre-training. Its results will be added here when that run is done.
+:::
 
 ## Data
 
 | source | role | period |
 |:--|:--|:--|
-| HURDAT2 [@landsea2013] / IBTrACS [@knapp2010], via tropycal [@burg2020] | tracks, targets | 1980– |
+| HURDAT2 [@landsea2013] / IBTrACS [@knapp2010], via tropycal [@burg2020] | tracks, targets (transformer) | 1980– |
+| TC vitals (NHC / JTWC operational messages, GFS bucket on AWS) | tracks for the live model, live storm feed | 2021– |
 | ERA5, WeatherBench2 1° copy [@hersbach2020; @rasp2024] | pre-training environment | 1980–2020 |
 | GFS 1°, NOAA open data on AWS | fine-tuning and live environment | 2021– |
 | GraphCast-GFS, AIGFS, NOAA open data on AWS | AI-model future environment | 2024– |

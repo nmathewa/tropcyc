@@ -153,10 +153,13 @@ forecast; see the National Hurricane Center or your national weather service.</p
 
 
 def run(model_path: str, host: str = "0.0.0.0", port: int = 8000, refresh_minutes: float = 30,
-        source: str = "gfs", future_source: str | None = None):
+        source: str = "gfs", future_source: str | None = None, feed: str = "tcvitals"):
     import uvicorn
 
     from .serving import load_bundle
 
     bundle = load_bundle(model_path, source=source, future_source=future_source)
-    uvicorn.run(create_app(bundle, refresh_minutes=refresh_minutes), host=host, port=port)
+    from .tcvitals import active_storms_dict
+
+    fetch = active_storms_dict if feed == "tcvitals" else fetch_active_storms
+    uvicorn.run(create_app(bundle, fetch=fetch, refresh_minutes=refresh_minutes), host=host, port=port)

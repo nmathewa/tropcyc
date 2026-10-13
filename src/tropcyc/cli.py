@@ -118,7 +118,7 @@ def cmd_serve(a):
     from .server import run
 
     run(a.model, host=a.host, port=a.port, refresh_minutes=a.refresh, source=a.source,
-        future_source=a.future_source)
+        future_source=a.future_source, feed=a.feed)
 
 
 def cmd_env_store(a):
@@ -177,6 +177,36 @@ class _Fitted:
         return self.model.predict(table)
 
 
+def cmd_site_update(a):
+    from .serving import forecast, load_bundle
+    from .sitegen import write_site
+    from .tcvitals import fetch_recent
+
+    bundle = load_bundle(a.model)
+    tracks = fetch_recent(48)
+    fc = forecast(bundle, tracks)
+    scores = pd.read_csv(a.scores)
+    hist = _read_table(a.tracks)
+    years = f"{hist['time'].min():%Y}–{hist['time'].max():%Y}"
+    issued = tracks["time"].max() if len(tracks) else pd.Timestamp.utcnow().tz_localize(None).floor("6h")
+    write_site(bundle, tracks, fc, scores, a.out, issued, hist["sid"].nunique(), years)
+    print(f"{len(fc)} storm forecasts, issued {issued:%Y-%m-%d %H} UTC -> {a.out}/forecast.md, results.md")
+
+
+def cmd_tcvitals(a):
+    from .features import build_table
+    from .tcvitals import download, load_archive
+    from .tracks import clean
+
+    n = download(a.start, a.end or pd.Timestamp.utcnow().tz_localize(None), a.folder)
+    tracks = clean(load_archive(a.folder))
+    table = build_table(tracks)
+    Path(a.output).parent.mkdir(parents=True, exist_ok=True)
+    table.to_csv(a.output, index=False)
+    tracks.to_csv(_tracks_path(a.output), index=False)
+    print(f"{n} cycles; {tracks['sid'].nunique()} storms; {len(table)} samples -> {a.output}")
+
+
 def cmd_pretrain(a):
     _transformer_run(a, finetune=False)
 
@@ -233,7 +263,23 @@ def main(argv=None):
     s.add_argument("--refresh", type=float, default=30, help="minutes between realtime fetches")
     s.add_argument("--source", default="gfs", help="history environment for a transformer .pt model")
     s.add_argument("--future-source", help="future-token source, e.g. aigfs (default: --source)")
+    s.add_argument("--feed", default="tcvitals", choices=["tcvitals", "nhc"],
+                   help="active storms: TC vitals from the GFS bucket, or NHC via tropycal")
     s.set_defaults(func=cmd_serve)
+
+    tv = sub.add_parser("tcvitals", help="track table from operational TC vitals (GFS bucket, 2021-)")
+    tv.add_argument("--start", default="2021-01-01")
+    tv.add_argument("--end")
+    tv.add_argument("--folder", default="data/tcvitals")
+    tv.add_argument("-o", "--output", default="data/table.csv")
+    tv.set_defaults(func=cmd_tcvitals)
+
+    su = sub.add_parser("site-update", help="write the website's live forecast and results pages")
+    su.add_argument("--model", default="models/live.joblib")
+    su.add_argument("--scores", default="runs/tcv_rolling.csv")
+    su.add_argument("--tracks", default="data/table_tracks.csv")
+    su.add_argument("--out", default="website/content")
+    su.set_defaults(func=cmd_site_update)
 
     es = sub.add_parser("env-store", help="environment patches (history + 24 h future) for the transformer")
     es.add_argument("table")

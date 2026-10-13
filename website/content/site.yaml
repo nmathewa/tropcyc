@@ -10,6 +10,10 @@ link-citations: true
 nav:
   - title: Overview
     href: index.html
+  - title: Live forecast
+    href: forecast.html
+  - title: Results
+    href: results.html
   - title: Method
     href: method.html
   - title: Run it
