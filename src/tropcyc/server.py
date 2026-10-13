@@ -34,17 +34,19 @@ from .tracks import from_storm_dicts
 
 
 class Fix(BaseModel):
-    time: str = Field(examples=["2024-10-07T12:00:00"])
-    lat: float
-    lon: float = Field(description="degrees east; west is negative")
-    vmax: float = Field(description="max sustained wind, kt")
-    mslp: float | None = None
-    type: str = "TS"
+    time: str = Field(max_length=40, examples=["2024-10-07T12:00:00"])
+    lat: float = Field(ge=-90, le=90)
+    lon: float = Field(ge=-360, le=360, description="degrees east; west is negative")
+    vmax: float = Field(ge=0, le=250, description="max sustained wind, kt")
+    mslp: float | None = Field(default=None, ge=800, le=1100)
+    type: str = Field(default="TS", pattern=r"^[A-Z]{2}$")
 
 
 class Track(BaseModel):
-    name: str = "storm"
-    fixes: list[Fix] = Field(description="6-hourly fixes, at least the last 24 h")
+    name: str = Field(default="storm", max_length=40)
+    # bounded: a track never needs more than a few weeks of 6-hourly fixes
+    fixes: list[Fix] = Field(min_length=1, max_length=200,
+                             description="6-hourly fixes, at least the last 24 h")
 
 
 def _records(df: pd.DataFrame) -> list[dict]:
@@ -115,7 +117,10 @@ def create_app(bundle: dict, fetch: Callable[[], dict] = fetch_active_storms,
         storm_dict = {k: [x[k] for x in f] for k in ("time", "lat", "lon", "vmax", "mslp", "type")}
         storm_dict["mslp"] = [float("nan") if v is None else v for v in storm_dict["mslp"]]
         storm_dict["name"] = track.name
-        fc = forecast(bundle, from_storm_dicts({"USER": storm_dict}))
+        try:
+            fc = forecast(bundle, from_storm_dicts({"USER": storm_dict}))
+        except (ValueError, TypeError) as e:  # e.g. an unparseable time string
+            raise HTTPException(422, "could not read the track: check the times and values") from e
         if fc.empty:
             raise HTTPException(422, "need tropical 6-hourly fixes covering at least the last 24 h")
         return _records(fc)[0]
@@ -127,11 +132,13 @@ def create_app(bundle: dict, fetch: Callable[[], dict] = fetch_active_storms,
         except HTTPException as e:
             fc, err = pd.DataFrame(), e.detail
         rows = "".join(
-            f"<tr><td>{html.escape(str(r['name']))}</td><td>{r['sid']}</td><td>{r['time']}</td>"
+            f"<tr><td>{html.escape(str(r['name']))}</td><td>{html.escape(str(r['sid']))}</td>"
+            f"<td>{html.escape(str(r['time']))}</td>"
             f"<td>{r['vmax']:.0f}</td><td>{r['dv_24']:+.0f}</td><td><b>{r['vmax_24']:.0f}</b></td>"
             f"<td>{'yes' if r['rapid_intensification'] else ''}</td></tr>"
             for r in _records(fc)
         ) or '<tr><td colspan="7">No active storms with 24 h of tropical track.</td></tr>'
+        model = html.escape(str(bundle["name"]))
         note = f'<p class="err">Feed problem: {html.escape(str(err))}</p>' if err else ""
         return f"""<!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>tropcyc live</title>
@@ -143,7 +150,7 @@ margin:2rem auto;padding:0 16px}}
 table{{border-collapse:collapse;width:100%}}td,th{{padding:6px 8px;border-bottom:1px solid var(--rule);
 text-align:left}}th{{color:var(--mute);font-weight:500}}.err{{color:#c33}}p.m{{color:var(--mute)}}
 </style></head><body><h1>Active tropical cyclones: 24 h intensity forecast</h1>
-<p class="m">Model: {bundle['name']}. Winds in kt. Experimental research output, not an official
+<p class="m">Model: {model}. Winds in kt. Experimental research output, not an official
 forecast; see the National Hurricane Center or your national weather service.</p>{note}
 <div style="overflow-x:auto"><table><tr><th>Name</th><th>ID</th><th>Last fix (UTC)</th><th>Now</th>
 <th>Change</th><th>In 24 h</th><th>Rapid int.</th></tr>{rows}</table></div>
@@ -152,7 +159,7 @@ forecast; see the National Hurricane Center or your national weather service.</p
     return app
 
 
-def run(model_path: str, host: str = "0.0.0.0", port: int = 8000, refresh_minutes: float = 30,
+def run(model_path: str, host: str = "127.0.0.1", port: int = 8000, refresh_minutes: float = 30,
         source: str = "gfs", future_source: str | None = None, feed: str = "tcvitals"):
     import uvicorn
 

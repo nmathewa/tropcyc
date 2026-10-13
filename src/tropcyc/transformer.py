@@ -323,14 +323,20 @@ class TransformerModel:
 
     def save(self, path) -> None:
         Path(path).parent.mkdir(parents=True, exist_ok=True)
-        torch.save({"state": self.net_.state_dict(), "stats": self.stats_, "size": self.size,
-                    "target": self.target, "history": self.history_}, path)
+        # Plain tensors, strings and numbers only, so the file loads with weights_only=True.
+        stats = {k: torch.from_numpy(np.asarray(v)) for k, v in self.stats_.items()}
+        history = [{k: (float(v) if isinstance(v, (float, np.floating)) else v) for k, v in h.items()}
+                   for h in self.history_]
+        torch.save({"state": self.net_.state_dict(), "stats": stats, "size": self.size,
+                    "target": self.target, "history": history}, path)
 
     @classmethod
     def load(cls, path, store=None, tracks=None, **kwargs):
-        ckpt = torch.load(path, map_location="cpu", weights_only=False)
+        # weights_only=True: a checkpoint cannot run code when it is loaded
+        ckpt = torch.load(path, map_location="cpu", weights_only=True)
         m = cls(store or {}, tracks, target=ckpt["target"], size=ckpt["size"], **kwargs)
-        m.stats_, m.history_ = ckpt["stats"], ckpt["history"]
+        m.stats_ = {k: v.numpy() for k, v in ckpt["stats"].items()}
+        m.history_ = ckpt["history"]
         m.net_ = StormTransformer(n_channels=len(m.stats_["x_mean"]), **PRESETS[m.size])
         m.net_.load_state_dict(ckpt["state"])
         m.net_.to(m.device)

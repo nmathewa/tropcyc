@@ -278,7 +278,8 @@ def main(argv=None):
 
     s = sub.add_parser("serve", help="HTTP server with live forecasts for active storms")
     s.add_argument("--model", default="models/live.joblib")
-    s.add_argument("--host", default="0.0.0.0")
+    s.add_argument("--host", default="127.0.0.1",
+                   help="interface to listen on; 0.0.0.0 exposes the server to your network")
     s.add_argument("--port", type=int, default=8000)
     s.add_argument("--refresh", type=float, default=30, help="minutes between realtime fetches")
     s.add_argument("--source", default="gfs", help="history environment for a transformer .pt model")

@@ -10,6 +10,7 @@ regenerated from data every time, so numbers on the site always match a run.
 from __future__ import annotations
 
 import html
+import re
 from pathlib import Path
 
 import numpy as np
@@ -80,7 +81,7 @@ NUMBER_WORDS = ("ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", 
 
 def _name(row) -> str:
     """Storm name; unnamed depressions carry a spelled-out number (often truncated) instead."""
-    n = str(row.name).strip().upper()
+    n = re.sub(r"[^A-Z0-9 \-]", "", str(row.name).upper()).strip()  # outside data: plain text only
     if not n or n.split("-")[0] in NUMBER_WORDS:
         return f"Depression {row.sid[:3]}"
     return n.title()

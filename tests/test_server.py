@@ -75,3 +75,20 @@ def test_predict(bundle):
     r = client.post("/predict", json={"name": "test", "fixes": fixes})
     assert r.status_code == 200 and "dv_24" in r.json()
     assert client.post("/predict", json={"fixes": fixes[:2]}).status_code == 422
+
+
+def test_predict_rejects_bad_or_oversized_input(bundle):
+    client = TestClient(create_app(bundle, fetch=live_storms))
+    fix = {"time": "2026-10-10T00:00", "lat": 15, "lon": -60, "vmax": 40}
+    assert client.post("/predict", json={"fixes": [fix] * 201}).status_code == 422
+    assert client.post("/predict", json={"fixes": [{**fix, "lat": 95}]}).status_code == 422
+    assert client.post("/predict", json={"fixes": [{**fix, "type": "<b>"}]}).status_code == 422
+    bad_time = [{**fix, "time": f"not a time {i}"} for i in range(5)]
+    assert client.post("/predict", json={"fixes": bad_time}).status_code == 422
+
+
+def test_page_escapes_feed_text(bundle):
+    storms = live_storms()
+    storms["AL142026"]["name"] = "<script>x</script>"
+    page = TestClient(create_app(bundle, fetch=lambda: storms)).get("/").text
+    assert "<script>x" not in page and "&lt;script&gt;" in page

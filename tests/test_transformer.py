@@ -109,3 +109,11 @@ def test_future_source_used_for_future_token(data):
     leads = {k[2]: v for k, v in store.items()}
     assert np.nanmean(leads[FUTURE_LEAD][0]) > 340 and np.nanmean(leads[0][0]) < 310
     assert fut.calls == len([k for k in store if k[2] == FUTURE_LEAD])
+
+
+def test_checkpoint_is_weights_only(data, tmp_path):
+    tracks, table = data
+    store = build_env_store(table.head(8), tracks, FakeSource(tracks), progress=False)
+    TransformerModel(store, tracks, epochs=1, verbose=False).fit(table.head(8)).save(tmp_path / "m.pt")
+    ckpt = torch.load(tmp_path / "m.pt", weights_only=True)  # raises if anything but tensors/plain data
+    assert set(ckpt) == {"state", "stats", "size", "target", "history"}

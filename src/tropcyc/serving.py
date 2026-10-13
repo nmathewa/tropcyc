@@ -51,7 +51,11 @@ def save_bundle(bundle: dict, path) -> None:
 
 
 def load_bundle(path, source: str = "gfs", future_source: str | None = None) -> dict:
-    """A .joblib bundle from `tropcyc train`, or a transformer .pt run live on `source`."""
+    """A .joblib bundle from `tropcyc train`, or a transformer .pt run live on `source`.
+
+    .joblib files are pickles: loading one can run code. Only load bundles you
+    trained yourself. Transformer .pt checkpoints load with weights_only=True.
+    """
     if str(path).endswith(".pt"):
         return transformer_bundle(path, source, future_source)
     import joblib
