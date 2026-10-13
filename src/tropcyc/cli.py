@@ -1,10 +1,18 @@
-"""Command line: tropcyc build-dataset | era5 | evaluate
+"""Command line: tropcyc build-dataset | era5 | evaluate | train | serve | env-store | pretrain | finetune
 
     tropcyc build-dataset --basin north_atlantic --years 1982 2024 -o data/table.csv
     tropcyc era5 data/table.csv -o data/patches.npz
     tropcyc evaluate data/table.csv --val-start 2014 --test-start 2019 [--patches data/patches.npz --cnn]
     tropcyc train data/table.csv -o models/live.joblib
     tropcyc serve --model models/live.joblib
+
+Transformer (pre-train on ERA5, fine-tune on GFS, run live on GFS):
+    tropcyc env-store data/table.csv --source era5 --years 1980 2020 -o data/env_era5.npz
+    tropcyc pretrain data/table.csv --store data/env_era5.npz --years 1980 2020 -o models/tf_era5.pt
+    tropcyc env-store data/table.csv --source gfs --years 2021 2025 -o data/env_gfs.npz
+    tropcyc finetune data/table.csv --model models/tf_era5.pt --store data/env_gfs.npz \
+        --years 2021 2025 -o models/tf_gfs.pt
+    tropcyc serve --model models/tf_gfs.pt --source gfs
 """
 
 from __future__ import annotations
@@ -21,6 +29,18 @@ def _read_table(path) -> pd.DataFrame:
     return pd.read_csv(path, parse_dates=["time"])
 
 
+def _tracks_path(table_path) -> Path:
+    p = Path(table_path)
+    return p.with_name(p.stem + "_tracks.csv")
+
+
+def _years(df: pd.DataFrame, years) -> pd.DataFrame:
+    if not years:
+        return df.reset_index(drop=True)
+    y = df.groupby("sid")["time"].transform("min").dt.year
+    return df[(y >= years[0]) & (y <= years[1])].reset_index(drop=True)
+
+
 def cmd_build(a):
     from .features import build_table
     from .tracks import clean, from_tropycal, load_tropycal
@@ -30,6 +50,7 @@ def cmd_build(a):
     table = build_table(tracks, leads=tuple(a.leads))
     Path(a.output).parent.mkdir(parents=True, exist_ok=True)
     table.to_csv(a.output, index=False)
+    tracks.to_csv(_tracks_path(a.output), index=False)  # full tracks: the transformer's history tokens
     print(f"{len(table)} samples from {table['sid'].nunique()} storms -> {a.output}")
 
 
@@ -96,7 +117,72 @@ def cmd_train(a):
 def cmd_serve(a):
     from .server import run
 
-    run(a.model, host=a.host, port=a.port, refresh_minutes=a.refresh)
+    run(a.model, host=a.host, port=a.port, refresh_minutes=a.refresh, source=a.source,
+        future_source=a.future_source)
+
+
+def cmd_env_store(a):
+    from .sources import make_source
+    from .transformer import build_env_store
+
+    table = _years(_read_table(a.table), a.years)
+    tracks = _read_table(a.tracks or _tracks_path(a.table))
+    future = make_source(a.future_source) if a.future_source else None
+    print(f"{len(table)} samples: history from {a.source}, future from {a.future_source or a.source} ...")
+    store = build_env_store(table, tracks, make_source(a.source), cache=a.output, workers=a.workers,
+                            future_source=future)
+    print(f"{len(store)} patches -> {a.output}")
+
+
+def _transformer_run(a, finetune: bool):
+    from .evaluate import compare
+    from .models import GradientBoosting, Persistence
+    from .transformer import TransformerModel, load_store
+
+    table = _years(_read_table(a.table), a.years)
+    tracks = _read_table(a.tracks or _tracks_path(a.table))
+    store = load_store(a.store)
+    table = table[[(str(s), t, 0) in store for s, t in zip(table["sid"], table["time"], strict=True)]]
+    table = table.reset_index(drop=True)
+    kw = {"epochs": a.epochs, "batch_size": a.batch_size, "device": a.device}
+    if finetune:
+        model = TransformerModel.load(a.model, store=store, tracks=tracks, **kw)
+    else:
+        model = TransformerModel(store, tracks, size=a.size, lr=a.lr, **kw)
+
+    # hold out the last season(s) to report skill, then refit nothing: early stopping
+    # inside fit already uses the most recent storms of the training part.
+    year = table.groupby("sid")["time"].transform("min").dt.year
+    test_start = year.max() - a.test_years + 1
+    train, test = table[year < test_start], table[year >= test_start]
+    model.fit(train.reset_index(drop=True), finetune=finetune)
+    model.save(a.output)
+    print(f"saved -> {a.output}")
+    if len(test):
+        print(f"\nheld-out seasons {test_start}-{year.max()} ({len(test)} samples):")
+        result = compare([Persistence(), GradientBoosting(), _Fitted(model)], train, test)
+        print(result[["n", "mae", "rmse", "skill_pct", "ri_events", "pod", "far"]].round(2))
+
+
+class _Fitted:
+    """Wrap an already-trained model so compare() does not retrain it."""
+
+    def __init__(self, model):
+        self.model, self.name = model, model.name
+
+    def fit(self, table):
+        return self
+
+    def predict(self, table):
+        return self.model.predict(table)
+
+
+def cmd_pretrain(a):
+    _transformer_run(a, finetune=False)
+
+
+def cmd_finetune(a):
+    _transformer_run(a, finetune=True)
 
 
 def main(argv=None):
@@ -145,7 +231,39 @@ def main(argv=None):
     s.add_argument("--host", default="0.0.0.0")
     s.add_argument("--port", type=int, default=8000)
     s.add_argument("--refresh", type=float, default=30, help="minutes between realtime fetches")
+    s.add_argument("--source", default="gfs", help="history environment for a transformer .pt model")
+    s.add_argument("--future-source", help="future-token source, e.g. aigfs (default: --source)")
     s.set_defaults(func=cmd_serve)
+
+    es = sub.add_parser("env-store", help="environment patches (history + 24 h future) for the transformer")
+    es.add_argument("table")
+    es.add_argument("--tracks", help="default: <table>_tracks.csv written by build-dataset")
+    es.add_argument("--source", default="era5",
+                    help="era5 | gfs | aigfs | graphcastgfs | xarray:<path.zarr>")
+    es.add_argument("--future-source", help="source for the 24 h future token (default: --source)")
+    es.add_argument("--years", nargs=2, type=int)
+    es.add_argument("--workers", type=int, default=16, help="parallel downloads")
+    es.add_argument("-o", "--output", default="data/env_era5.npz")
+    es.set_defaults(func=cmd_env_store)
+
+    for name, fn, helptext in (("pretrain", cmd_pretrain, "train the transformer from scratch"),
+                               ("finetune", cmd_finetune, "continue training a transformer on a new source")):
+        q = sub.add_parser(name, help=helptext)
+        q.add_argument("table")
+        q.add_argument("--tracks")
+        q.add_argument("--store", required=True)
+        q.add_argument("--years", nargs=2, type=int)
+        q.add_argument("--test-years", type=int, default=2, help="last N seasons held out for scoring")
+        q.add_argument("--epochs", type=int, default=40)
+        q.add_argument("--batch-size", type=int, default=64)
+        q.add_argument("--device", help="cpu | cuda | mps (default: cuda if available)")
+        q.add_argument("-o", "--output", required=True)
+        if name == "pretrain":
+            q.add_argument("--size", default="small", choices=["small", "base", "large"])
+            q.add_argument("--lr", type=float, default=3e-4)
+        else:
+            q.add_argument("--model", required=True, help="pre-trained .pt")
+        q.set_defaults(func=fn)
 
     a = p.parse_args(argv)
     a.func(a)

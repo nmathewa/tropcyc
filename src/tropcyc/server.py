@@ -152,9 +152,11 @@ forecast; see the National Hurricane Center or your national weather service.</p
     return app
 
 
-def run(model_path: str, host: str = "0.0.0.0", port: int = 8000, refresh_minutes: float = 30):
+def run(model_path: str, host: str = "0.0.0.0", port: int = 8000, refresh_minutes: float = 30,
+        source: str = "gfs", future_source: str | None = None):
     import uvicorn
 
     from .serving import load_bundle
 
-    uvicorn.run(create_app(load_bundle(model_path), refresh_minutes=refresh_minutes), host=host, port=port)
+    bundle = load_bundle(model_path, source=source, future_source=future_source)
+    uvicorn.run(create_app(bundle, refresh_minutes=refresh_minutes), host=host, port=port)

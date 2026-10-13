@@ -73,13 +73,13 @@ def relative_humidity(q, t_k, p_hpa: float):
     return 100.0 * e / es
 
 
-def relative_vorticity(u, v, lats):
+def relative_vorticity(u, v, lats, grid_deg: float = GRID_DEG):
     """dv/dx - du/dy (1/s) on a regular 0.25 deg patch; ARCO-ERA5 has no vorticity field.
 
     `lats` are the patch's row latitudes (descending, as in ERA5).
     """
     r = 6.371e6
-    d = np.deg2rad(GRID_DEG)
+    d = np.deg2rad(grid_deg)
     coslat = np.cos(np.deg2rad(lats))[:, None]
     dv_dx = np.gradient(v, axis=1) / (r * coslat * d)
     du_dy = -np.gradient(u, axis=0) / (r * d)  # rows run north to south

@@ -50,10 +50,49 @@ def save_bundle(bundle: dict, path) -> None:
     joblib.dump(bundle, path)
 
 
-def load_bundle(path) -> dict:
+def load_bundle(path, source: str = "gfs", future_source: str | None = None) -> dict:
+    """A .joblib bundle from `tropcyc train`, or a transformer .pt run live on `source`."""
+    if str(path).endswith(".pt"):
+        return transformer_bundle(path, source, future_source)
     import joblib
 
     return joblib.load(path)
+
+
+class LiveTransformer:
+    """Runs a trained transformer on current storms, fetching environment from `source`."""
+
+    def __init__(self, model, source, future_source=None):
+        self.model, self.source, self.future_source = model, source, future_source
+
+    def predict_live(self, tracks: pd.DataFrame, rows: pd.DataFrame):
+        from .transformer import build_env_store
+
+        self.model.tracks = tracks
+        self.model.store = build_env_store(rows, tracks, self.source, extrapolate=True,
+                                           progress=False, workers=8, future_source=self.future_source)
+        if not self.model.store:
+            raise RuntimeError("no environment patches could be fetched for the active storms")
+        dv, p = self.model._predict_loader(self.model._loader(rows.reset_index(drop=True), False))
+        return dv, p
+
+
+def transformer_bundle(path, source: str = "gfs", future_source: str | None = None) -> dict:
+    from .sources import make_source
+    from .transformer import TransformerModel
+
+    model = TransformerModel.load(path, verbose=False)
+    val = [h for h in model.history_ if h["finetune"]] or model.history_
+    label = f" + {future_source} future" if future_source else ""
+    return {
+        "model": LiveTransformer(model, make_source(source, live=True),
+                                 make_source(future_source, live=True) if future_source else None),
+        "name": f"transformer ({model.size}, {source}{label})",
+        "kind": "sequence",
+        "target": model.target,
+        "validation": {"transformer": {"mae": min(h["val_mae"] for h in val)}} if val else {},
+        "checkpoint": str(path),
+    }
 
 
 def forecast(bundle: dict, tracks: pd.DataFrame) -> pd.DataFrame:
@@ -63,7 +102,12 @@ def forecast(bundle: dict, tracks: pd.DataFrame) -> pd.DataFrame:
     if feats.empty:
         return pd.DataFrame(columns=cols + ["dv_24", "vmax_24", "valid_time", "rapid_intensification"])
     out = feats[cols].copy()
-    out["dv_24"] = np.round(bundle["model"].predict(feats), 1)
+    if bundle.get("kind") == "sequence":
+        dv, p_ri = bundle["model"].predict_live(clean(tracks, min_fixes=1), feats)
+        out["dv_24"] = np.round(dv, 1)
+        out["ri_probability"] = np.round(p_ri, 3)
+    else:
+        out["dv_24"] = np.round(bundle["model"].predict(feats), 1)
     out["vmax_24"] = np.clip(out["vmax"] + out["dv_24"], 15, None).round(0)
     out["valid_time"] = out["time"] + pd.Timedelta(hours=24)
     out["rapid_intensification"] = out["dv_24"] >= RI_THRESHOLD_KT

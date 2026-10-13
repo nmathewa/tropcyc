@@ -68,6 +68,25 @@ print(tc.compare([tc.Persistence(), tc.Trend(), tc.Climatology(), tc.GradientBoo
 ds.get_storm(("ian", 2022)).plot()                      # maps stay with tropycal
 ```
 
+## Transformer: ERA5 pre-training, GFS fine-tuning, live on GFS or AI models
+
+A temporal transformer reads the last 24 h of a storm (environment + track) plus
+the *forecast* environment 24 h ahead, and predicts the intensity change and the
+probability of rapid intensification. It is pre-trained on 40 years of ERA5,
+fine-tuned on GFS (2021+), and runs live on GFS. NOAA's GraphCast-GFS / AIGFS
+can supply the future environment.
+
+```bash
+tropcyc env-store data/table.csv --source era5 --years 1980 2020 -o data/env_era5.npz
+tropcyc pretrain  data/table.csv --store data/env_era5.npz --years 1980 2020 -o models/tf_era5.pt
+tropcyc env-store data/table.csv --source gfs --years 2021 2025 -o data/env_gfs.npz
+tropcyc finetune  data/table.csv --model models/tf_era5.pt --store data/env_gfs.npz \
+    --years 2021 2025 -o models/tf_gfs.pt
+tropcyc serve --model models/tf_gfs.pt --source gfs --future-source aigfs
+```
+
+Full walkthrough, design and caveats: [docs/transformer.md](docs/transformer.md).
+
 ## Live forecasts for active storms
 
 `tropcyc train` scores every model that can run in real time (persistence, trend,
@@ -104,19 +123,24 @@ src/tropcyc/
   era5.py        storm-centred ERA5 patches from ARCO-ERA5, cached to .npz
   models.py      Persistence, Trend, Climatology, GradientBoosting
   cnn.py         IntensityNet (PyTorch): ERA5 patch + track features -> dv_24
+  sources.py     environment sources on one grid: ERA5, GFS, GraphCast-GFS, AIGFS, any xarray
+  transformer.py storm transformer: history + future tokens -> dv_24 and RI probability
   evaluate.py    season splits, scores, RI scores, compare()
   plotting.py    forecast-vs-best-track and scatter plots
   serving.py     pick + save the live model; forecasts from the latest fix
   server.py      FastAPI app: active storms, /predict, HTML page
-  cli.py         tropcyc build-dataset | era5 | evaluate | train | serve
+  cli.py         tropcyc build-dataset | era5 | evaluate | train | serve |
+                 env-store | pretrain | finetune
 docs/
   tensorflow_to_pytorch.md   the CNN explained for Keras users
+  transformer.md             the transformer: data, design, step-by-step, caveats
 ```
 
 ## Notes
 
 - **Data access.** tropycal downloads from NOAA (NHC for HURDAT2, NCEI for IBTrACS).
-  ERA5 comes from `gs://gcp-public-data-arco-era5` with anonymous access.
+  ERA5 comes from WeatherBench2 / ARCO-ERA5 on Google Cloud, and GFS, GraphCast-GFS and
+  AIGFS from NOAA's open-data buckets on AWS, all with anonymous access.
 - **Earlier work.** The 2023–24 Atlantic experiments (TensorFlow CNN/RNN, ERA5
   preprocessing, Manim animations) are preserved on the
   [`legacy-2024`](https://github.com/nmathewa/tropcyc/tree/legacy-2024) branch.
