@@ -177,6 +177,26 @@ class _Fitted:
         return self.model.predict(table)
 
 
+def cmd_rolling(a):
+    from .evaluate import compare
+    from .models import Climatology, GradientBoosting, Persistence, Trend
+
+    table = _read_table(a.table)
+    year = table.groupby("sid")["time"].transform("min").dt.year
+    last = a.last or int(year.max())
+    rows = []
+    for y in range(a.first, last + 1):
+        train, test = table[year < y], table[year == y]
+        if train.empty or test.empty:
+            continue
+        result = compare([Persistence(), Trend(), Climatology(), GradientBoosting()], train, test)
+        rows += [{"test_year": y, "model": m, **r.to_dict()} for m, r in result.iterrows()]
+    out = pd.DataFrame(rows)
+    Path(a.output).parent.mkdir(parents=True, exist_ok=True)
+    out.to_csv(a.output, index=False)
+    print(out.pivot(index="model", columns="test_year", values="skill_pct").round(1))
+
+
 def cmd_site_update(a):
     from .serving import forecast, load_bundle
     from .sitegen import write_site
@@ -273,6 +293,13 @@ def main(argv=None):
     tv.add_argument("--folder", default="data/tcvitals")
     tv.add_argument("-o", "--output", default="data/table.csv")
     tv.set_defaults(func=cmd_tcvitals)
+
+    ro = sub.add_parser("rolling", help="rolling-origin scores: train on seasons before Y, test on Y")
+    ro.add_argument("table")
+    ro.add_argument("--first", type=int, default=2023)
+    ro.add_argument("--last", type=int)
+    ro.add_argument("-o", "--output", default="runs/tcv_rolling.csv")
+    ro.set_defaults(func=cmd_rolling)
 
     su = sub.add_parser("site-update", help="write the website's live forecast and results pages")
     su.add_argument("--model", default="models/live.joblib")
