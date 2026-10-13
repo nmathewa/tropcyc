@@ -1,9 +1,31 @@
+# data and model outputs
 *.nc
 *.grib2
 *.csv
 *.npy
+*.npz
+*.parquet
+*.h5
+*.keras
+*.pt
 *.mp4
-*.svg
-*.png
-*.jpg
-*.tex
+data/
+runs/
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# os / editor
+.DS_Store
+.vscode/
+.idea/
+models/
+*.joblib

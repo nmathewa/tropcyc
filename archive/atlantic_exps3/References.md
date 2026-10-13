@@ -1,1 +1,0 @@
-https://medium.com/neuronio/an-introduction-to-convlstm-55c9025563a7

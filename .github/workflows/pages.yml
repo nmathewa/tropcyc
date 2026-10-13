@@ -1,0 +1,72 @@
+# Every 6 hours: refresh TC vitals, retrain the live model, regenerate the forecast and
+# results pages, build the website with pandoc and the academic-site-template, deploy to Pages.
+# Nothing is committed: the TC vitals archive lives in the Actions cache between runs.
+# TC vitals for a GFS cycle appear ~3.5-4 h after it, so runs start at 04:20, 10:20, 16:20, 22:20 UTC.
+name: website
+
+on:
+  schedule:
+    - cron: "20 4,10,16,22 * * *"
+  push:
+    branches: [main]
+    paths: ["website/content/**", "src/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write           # keepalive: stops GitHub disabling the schedule after 60 quiet days
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Latest academic-site-template and pandoc
+        run: |
+          git submodule update --remote website/theme
+          curl -sfL -o pandoc.deb https://github.com/jgm/pandoc/releases/download/3.11/pandoc-3.11-1-amd64.deb
+          sudo dpkg -i pandoc.deb && rm pandoc.deb
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[server]"
+      - name: Restore TC vitals archive
+        uses: actions/cache@v4
+        with:
+          path: data/tcvitals
+          key: tcvitals-${{ github.run_id }}
+          restore-keys: tcvitals-
+      - name: TC vitals -> track table (downloads only new cycles)
+        run: tropcyc tcvitals --start 2021-01-01 -o data/table.csv
+      - name: Season-by-season scores
+        run: tropcyc rolling data/table.csv --first 2023 -o runs/tcv_rolling.csv
+      - name: Retrain the live model on all seasons
+        run: |
+          Y=$(date -u +%Y)
+          tropcyc train data/table.csv --val-start $((Y-1)) --test-start $Y -o models/live.joblib
+      - name: Forecast active storms, write pages
+        run: tropcyc site-update --model models/live.joblib --scores runs/tcv_rolling.csv
+      - run: make -C website
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: website/_site
+      - uses: liskin/gh-workflow-keepalive@v1
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
