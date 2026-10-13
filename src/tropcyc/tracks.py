@@ -28,10 +28,16 @@ def load_tropycal(basin: str = "north_atlantic", source: str = "hurdat", **kwarg
     return tracks.TrackDataset(basin=basin, source=source, **kwargs)
 
 
-def from_tropycal(dataset, year_range: tuple[int, int] | None = None) -> pd.DataFrame:
-    """Flatten a tropycal TrackDataset into the tropcyc track table."""
+def from_storm_dicts(storms, year_range: tuple[int, int] | None = None) -> pd.DataFrame:
+    """Flatten tropycal storm dictionaries ({sid: {"time": [...], "vmax": [...], ...}}).
+
+    Historical (TrackDataset.data) and realtime (RealtimeStorm.dict) storms share
+    this layout, so both go through here.
+    """
     frames = []
-    for sid, storm in dataset.data.items():
+    for sid, storm in storms.items():
+        if not len(storm["time"]):
+            continue
         year = int(storm.get("year", pd.Timestamp(storm["time"][0]).year))
         if year_range and not (year_range[0] <= year <= year_range[1]):
             continue
@@ -53,6 +59,11 @@ def from_tropycal(dataset, year_range: tuple[int, int] | None = None) -> pd.Data
     if not frames:
         return pd.DataFrame(columns=COLUMNS)
     return pd.concat(frames, ignore_index=True)[COLUMNS]
+
+
+def from_tropycal(dataset, year_range: tuple[int, int] | None = None) -> pd.DataFrame:
+    """Flatten a tropycal TrackDataset into the tropcyc track table."""
+    return from_storm_dicts(dataset.data, year_range)
 
 
 def clean(

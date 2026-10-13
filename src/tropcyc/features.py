@@ -86,3 +86,14 @@ def build_table(tracks: pd.DataFrame, leads=(24,)) -> pd.DataFrame:
     table = add_targets(add_track_features(tracks), leads)
     needed = ["dvmax_24", "u_motion"] + [f"dv_{lead}" for lead in leads]
     return table.dropna(subset=needed).reset_index(drop=True)
+
+
+def latest_features(tracks: pd.DataFrame) -> pd.DataFrame:
+    """Predictors at each storm's most recent fix (for live forecasts).
+
+    Storms without 24 h of history at that fix are dropped: the models need
+    the recent trend, and guessing it would be worse than no forecast.
+    """
+    table = add_track_features(tracks)
+    latest = table.loc[table.groupby("sid")["time"].idxmax()]
+    return latest.dropna(subset=["dvmax_24", "u_motion"]).reset_index(drop=True)

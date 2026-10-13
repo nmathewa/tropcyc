@@ -3,6 +3,8 @@
     tropcyc build-dataset --basin north_atlantic --years 1982 2024 -o data/table.csv
     tropcyc era5 data/table.csv -o data/patches.npz
     tropcyc evaluate data/table.csv --val-start 2014 --test-start 2019 [--patches data/patches.npz --cnn]
+    tropcyc train data/table.csv -o models/live.joblib
+    tropcyc serve --model models/live.joblib
 """
 
 from __future__ import annotations
@@ -81,6 +83,22 @@ def cmd_evaluate(a):
         result.to_csv(a.output)
 
 
+def cmd_train(a):
+    from .serving import save_bundle, select_and_train
+
+    table = _read_table(a.table)
+    bundle = select_and_train(table, a.val_start, a.test_start, target=f"dv_{a.lead}")
+    save_bundle(bundle, a.output)
+    print(pd.DataFrame(bundle["validation"]).T[["mae", "rmse", "skill_pct"]].round(2))
+    print(f"best on {a.val_start}-{a.test_start - 1}: {bundle['name']}, refit on all data -> {a.output}")
+
+
+def cmd_serve(a):
+    from .server import run
+
+    run(a.model, host=a.host, port=a.port, refresh_minutes=a.refresh)
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(prog="tropcyc", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -113,6 +131,21 @@ def main(argv=None):
     v.add_argument("--epochs", type=int, default=40)
     v.add_argument("-o", "--output")
     v.set_defaults(func=cmd_evaluate)
+
+    t = sub.add_parser("train", help="pick the best live-capable model, refit on all data, save it")
+    t.add_argument("table")
+    t.add_argument("--lead", type=int, default=24)
+    t.add_argument("--val-start", type=int, default=2014)
+    t.add_argument("--test-start", type=int, default=2019)
+    t.add_argument("-o", "--output", default="models/live.joblib")
+    t.set_defaults(func=cmd_train)
+
+    s = sub.add_parser("serve", help="HTTP server with live forecasts for active storms")
+    s.add_argument("--model", default="models/live.joblib")
+    s.add_argument("--host", default="0.0.0.0")
+    s.add_argument("--port", type=int, default=8000)
+    s.add_argument("--refresh", type=float, default=30, help="minutes between realtime fetches")
+    s.set_defaults(func=cmd_serve)
 
     a = p.parse_args(argv)
     a.func(a)

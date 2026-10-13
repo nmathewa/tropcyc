@@ -31,8 +31,9 @@ dependencies = [
 era5 = ["xarray>=2023.1", "zarr>=2.16", "gcsfs>=2023.6"]
 cnn = ["torch>=2.2"]
 plot = ["matplotlib>=3.7"]
-test = ["pytest>=7.0"]
-all = ["tropcyc[era5,cnn,plot]"]
+server = ["fastapi>=0.110", "uvicorn>=0.29", "joblib>=1.3"]
+test = ["pytest>=7.0", "httpx>=0.27"]
+all = ["tropcyc[era5,cnn,plot,server]"]
 dev = ["tropcyc[all,test]", "ruff>=0.4"]
 
 [project.scripts]
@@ -47,6 +48,9 @@ path = "src/tropcyc/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/tropcyc"]
+
+[tool.hatch.build.targets.sdist]
+exclude = ["/data", "/models", "/runs"]
 
 [tool.ruff]
 line-length = 110

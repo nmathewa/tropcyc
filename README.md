@@ -68,6 +68,33 @@ print(tc.compare([tc.Persistence(), tc.Trend(), tc.Climatology(), tc.GradientBoo
 ds.get_storm(("ian", 2022)).plot()                      # maps stay with tropycal
 ```
 
+## Live forecasts for active storms
+
+`tropcyc train` scores every model that can run in real time (persistence, trend,
+climatology, gradient boosting) on the validation seasons, keeps the best, and refits it
+on all years. `tropcyc serve` then forecasts the storms active right now, using
+tropycal's realtime feed from NHC.
+
+```bash
+pip install "tropcyc[server]"
+tropcyc train data/table.csv -o models/live.joblib
+tropcyc serve --model models/live.joblib          # http://localhost:8000
+```
+
+| Endpoint | |
+|---|---|
+| `GET /` | page listing active storms and their 24 h forecast |
+| `GET /storms`, `GET /storms/{id}` | the same as JSON |
+| `POST /predict` | forecast for a track you send (6-hourly fixes, at least 24 h) |
+| `GET /model` | which model is loaded, with its validation scores |
+| `GET /docs` | interactive API docs |
+
+The realtime feed is fetched at most every 30 minutes (`--refresh`). If NHC is
+unreachable, the last good forecasts keep being served. ERA5-based models are not used
+live because ERA5 is published about five days late. Docker: see `Dockerfile`.
+
+This is experimental research output, not an official forecast.
+
 ## Layout
 
 ```
@@ -79,7 +106,9 @@ src/tropcyc/
   cnn.py         IntensityNet (PyTorch): ERA5 patch + track features -> dv_24
   evaluate.py    season splits, scores, RI scores, compare()
   plotting.py    forecast-vs-best-track and scatter plots
-  cli.py         tropcyc build-dataset | era5 | evaluate
+  serving.py     pick + save the live model; forecasts from the latest fix
+  server.py      FastAPI app: active storms, /predict, HTML page
+  cli.py         tropcyc build-dataset | era5 | evaluate | train | serve
 docs/
   tensorflow_to_pytorch.md   the CNN explained for Keras users
 ```
