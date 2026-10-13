@@ -89,8 +89,8 @@ docs/
 - **Data access.** tropycal downloads from NOAA (NHC for HURDAT2, NCEI for IBTrACS).
   ERA5 comes from `gs://gcp-public-data-arco-era5` with anonymous access.
 - **Earlier work.** The 2023–24 Atlantic experiments (TensorFlow CNN/RNN, ERA5
-  preprocessing, Manim animations) are preserved at the
-  [`legacy-2024`](https://github.com/nmathewa/tropcyc/tree/legacy-2024) tag.
+  preprocessing, Manim animations) are preserved on the
+  [`legacy-2024`](https://github.com/nmathewa/tropcyc/tree/legacy-2024) branch.
 
 ## License
 

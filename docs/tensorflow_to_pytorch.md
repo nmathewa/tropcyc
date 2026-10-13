@@ -1,7 +1,7 @@
 # From TensorFlow/Keras to PyTorch, for this project
 
-The old experiments in this repo (`atlantic_exps2`, `atlantic_exps3`, now under the
-`legacy-2024` tag) used TensorFlow/Keras. The new CNN in `src/tropcyc/cnn.py` is PyTorch.
+The old experiments in this repo (`atlantic_exps2`, `atlantic_exps3`, now on the
+`legacy-2024` branch) used TensorFlow/Keras. The new CNN in `src/tropcyc/cnn.py` is PyTorch.
 This guide only covers what you need to read and change that one file, set next to the
 Keras code you already know.
 
